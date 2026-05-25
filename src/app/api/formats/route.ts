@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getVideoMetadata } from "@/lib/youtube";
+import { getVideoQualities } from "@/lib/youtube";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,12 +13,12 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const metadata = await getVideoMetadata(v);
-    return NextResponse.json(metadata);
+    const qualities = await getVideoQualities(v);
+    return NextResponse.json({ qualities });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to fetch video info", details: message },
+      { error: "Failed to fetch qualities", details: message },
       { status: 500 }
     );
   }
