@@ -32,16 +32,11 @@ export async function GET(req: NextRequest) {
 
   try {
     const range = req.headers.get("range");
-    const userAgent = req.headers.get("user-agent");
     const fetchHeaders = new Headers();
     if (range) {
       fetchHeaders.set("Range", range);
     }
-    if (userAgent) {
-      fetchHeaders.set("User-Agent", userAgent);
-    } else {
-      fetchHeaders.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
-    }
+    fetchHeaders.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
     fetchHeaders.set("Referer", "https://www.youtube.com/");
     fetchHeaders.set("Origin", "https://www.youtube.com");
 

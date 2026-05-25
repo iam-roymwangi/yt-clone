@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getVideoQualities } from "@/lib/youtube";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 

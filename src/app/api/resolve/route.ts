@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStreamUrl } from "@/lib/youtube";
+import { getStreamUrlNode } from "@/lib/youtube-node";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const stream = await getStreamUrl(v, itag);
+    const stream = await getStreamUrlNode(v, itag);
 
     if (!stream) {
       return NextResponse.json({ error: "No suitable format found" }, { status: 404 });

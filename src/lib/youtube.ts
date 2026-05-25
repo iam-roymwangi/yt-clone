@@ -50,7 +50,7 @@ export function noCacheFetch(
   });
 }
 
-function pickCombinedFormat(
+export function pickCombinedFormat(
   formats: Array<{
     itag?: number;
     url?: string;
@@ -72,7 +72,7 @@ function pickCombinedFormat(
   return mp4[0];
 }
 
-function dedupeQualities(qualities: VideoQuality[]): VideoQuality[] {
+export function dedupeQualities(qualities: VideoQuality[]): VideoQuality[] {
   const seen = new Set<string>();
   return qualities.filter((q) => {
     const key = `${q.stream}-${q.label}`;
@@ -196,67 +196,17 @@ async function getQualitiesFromYoutubei(
   return progressive;
 }
 
-async function getQualitiesFromYoutubeExt(
-  videoId: string
-): Promise<VideoQuality[]> {
-  const { videoInfo, getFormats } = await import("youtube-ext");
-  const info = await videoInfo(videoId);
-  const formats = await getFormats(info.stream, { evaluator: "eval" });
 
-  const qualities = formats
-    .filter((f) => f.mimeType?.includes("video/mp4") && f.audioQuality && f.itag)
-    .sort((a, b) => (b.height ?? 0) - (a.height ?? 0))
-    .map((f) => ({
-      itag: f.itag!,
-      label: f.qualityLabel || (f.height ? `${f.height}p` : `itag ${f.itag}`),
-      mimeType: f.mimeType?.split(";")[0] ?? "video/mp4",
-      stream: "progressive" as const,
-      height: f.height,
-    }));
-
-  return dedupeQualities(qualities);
-}
-
-async function getQualitiesFromYtdl(
-  videoId: string
-): Promise<VideoQuality[]> {
-  const ytdl = await import("@distube/ytdl-core");
-  const info = await ytdl.default.getInfo(videoId);
-
-  const qualities = info.formats
-    .filter((f) => f.hasVideo && f.hasAudio && f.itag)
-    .sort((a, b) => (b.height ?? 0) - (a.height ?? 0))
-    .map((f) => ({
-      itag: f.itag,
-      label:
-        f.qualityLabel || (f.height ? `${f.height}p` : `itag ${f.itag}`),
-      mimeType: f.mimeType?.split(";")[0] ?? "video/mp4",
-      stream: "progressive" as const,
-      height: f.height,
-    }));
-
-  return dedupeQualities(qualities);
-}
 
 export async function getVideoQualities(
   videoId: string
 ): Promise<VideoQuality[]> {
-  const attempts = [
-    getQualitiesFromYoutubei,
-    getQualitiesFromYoutubeExt,
-    getQualitiesFromYtdl,
-  ];
-
-  for (const attempt of attempts) {
-    try {
-      const qualities = await attempt(videoId);
-      if (qualities.length > 0) return qualities;
-    } catch (err) {
-      console.error(`Quality resolver failed (${attempt.name}):`, err);
-    }
+  try {
+    return await getQualitiesFromYoutubei(videoId);
+  } catch (err) {
+    console.error("Quality resolver failed:", err);
+    return [];
   }
-
-  return [];
 }
 
 export async function getHlsManifestUrl(
@@ -368,62 +318,7 @@ async function getStreamUrlFromYoutubei(
 }
 
 
-async function getStreamUrlFromYoutubeExt(
-  videoId: string,
-  itag?: number
-): Promise<StreamResult | null> {
-  const { videoInfo, getFormats } = await import("youtube-ext");
-  const info = await videoInfo(videoId);
-  const formats = await getFormats(info.stream, { evaluator: "eval" });
 
-  const format = itag
-    ? formats.find((f) => f.itag === itag && f.url)
-    : pickCombinedFormat(formats);
-
-  if (!format?.url) return null;
-
-  let url = format.url;
-  if (!url.includes("alr=")) {
-    url += (url.includes("?") ? "&" : "?") + "alr=yes";
-  }
-
-  return {
-    url,
-    mimeType: format.mimeType?.split(";")[0] ?? "video/mp4",
-  };
-}
-
-
-async function getStreamUrlFromYtdl(
-  videoId: string,
-  itag?: number
-): Promise<StreamResult | null> {
-  const ytdl = await import("@distube/ytdl-core");
-  const info = await ytdl.default.getInfo(videoId);
-
-  const format = itag
-    ? info.formats.find((f) => f.itag === itag && f.url)
-    : (ytdl.default.chooseFormat(info.formats, {
-        quality: "highest",
-        filter: "audioandvideo",
-      }) ??
-      ytdl.default.chooseFormat(info.formats, {
-        quality: "lowest",
-        filter: "audioandvideo",
-      }));
-
-  if (!format?.url) return null;
-
-  let url = format.url;
-  if (!url.includes("alr=")) {
-    url += (url.includes("?") ? "&" : "?") + "alr=yes";
-  }
-
-  return {
-    url,
-    mimeType: format.mimeType?.split(";")[0] ?? "video/mp4",
-  };
-}
 
 
 export async function getStreamUrl(
@@ -431,50 +326,28 @@ export async function getStreamUrl(
   itag?: number
 ): Promise<StreamResult | null> {
   console.log(`[getStreamUrl] Resolving stream for videoId=${videoId}, itag=${itag}`);
-  const attempts = [
-    { name: "youtubei", fn: () => getStreamUrlFromYoutubei(videoId, itag) },
-    { name: "youtube-ext", fn: () => getStreamUrlFromYoutubeExt(videoId, itag) },
-    { name: "ytdl", fn: () => getStreamUrlFromYtdl(videoId, itag) },
-  ];
-
-  for (const attempt of attempts) {
-    try {
-      console.log(`[getStreamUrl] Trying resolver: ${attempt.name}`);
-      const result = await attempt.fn();
-      if (result) {
-        console.log(`[getStreamUrl] Resolver ${attempt.name} succeeded! URL: ${result.url.substring(0, 80)}...`);
-        return result;
-      }
-      console.log(`[getStreamUrl] Resolver ${attempt.name} returned null`);
-    } catch (err) {
-      console.error(`[getStreamUrl] Resolver ${attempt.name} failed:`, err);
-    }
+  try {
+    return await getStreamUrlFromYoutubei(videoId, itag);
+  } catch (err) {
+    console.error(`[getStreamUrl] Edge resolver failed:`, err);
+    return null;
   }
-
-  console.log(`[getStreamUrl] All resolvers failed for videoId=${videoId}`);
-  return null;
 }
 
 export async function getVideoMetadata(
   videoId: string
 ): Promise<VideoMetadata> {
-  try {
-    const info = await getCachedVideoInfo(videoId);
-    return {
-      title: info.basic_info.title ?? "Unknown",
-      description: info.basic_info.short_description ?? "",
-      author: info.basic_info.author ?? "Unknown Author",
-      viewCount: Number(info.basic_info.view_count) || 0,
-    };
-  } catch {
-    const { videoInfo } = await import("youtube-ext");
-    const info = await videoInfo(videoId);
-    const views = info.views?.text?.replace(/\D/g, "") ?? "0";
-    return {
-      title: info.title,
-      description: info.description,
-      author: info.channel?.name ?? "Unknown Author",
-      viewCount: parseInt(views, 10) || 0,
-    };
+  const info = await getCachedVideoInfo(videoId);
+  if (info.playability_status?.status && info.playability_status.status !== "OK") {
+    throw new Error(`Playability status not OK: ${info.playability_status.status}. Reason: ${info.playability_status.reason}`);
   }
+  if (!info.basic_info || !info.basic_info.title) {
+    throw new Error("No video title found in youtubei response");
+  }
+  return {
+    title: info.basic_info.title,
+    description: info.basic_info.short_description ?? "",
+    author: info.basic_info.author ?? "Unknown Author",
+    viewCount: Number(info.basic_info.view_count) || 0,
+  };
 }

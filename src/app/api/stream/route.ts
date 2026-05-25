@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getStreamUrl } from "@/lib/youtube";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -21,21 +22,43 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Fetch deciphered stream URL from the Node.js resolver route
-    const resolveUrl = `${origin}/api/resolve?v=${v}${itag ? `&itag=${itag}` : ""}`;
-    const resolveRes = await fetch(resolveUrl, { cache: "no-store" });
-    if (!resolveRes.ok) {
-      return new NextResponse("Failed to resolve stream", { status: resolveRes.status });
+    let streamUrl: string | null = null;
+    let mimeType = "video/mp4";
+
+    // 1. Try resolving using Edge-compatible youtubei first
+    try {
+      const edgeStream = await getStreamUrl(v, itag ? parseInt(itag, 10) : undefined);
+      if (edgeStream && edgeStream.url) {
+        streamUrl = edgeStream.url;
+        mimeType = edgeStream.mimeType;
+      }
+    } catch (err) {
+      console.warn("Edge stream resolution failed, falling back to node resolver:", err);
     }
 
-    const stream = await resolveRes.json();
-    if (!stream || !stream.url) {
+    // 2. If Edge resolution failed, fallback to Node.js resolver route
+    if (!streamUrl) {
+      const resolveUrl = `${origin}/api/resolve?v=${v}${itag ? `&itag=${itag}` : ""}`;
+      const resolveRes = await fetch(resolveUrl, { cache: "no-store" });
+      if (!resolveRes.ok) {
+        return new NextResponse("Failed to resolve stream", { status: resolveRes.status });
+      }
+
+      const stream = await resolveRes.json();
+      if (!stream || !stream.url) {
+        return new NextResponse("No stream URL resolved", { status: 404 });
+      }
+      streamUrl = stream.url;
+      mimeType = stream.mimeType || "video/mp4";
+    }
+
+    if (!streamUrl) {
       return new NextResponse("No stream URL resolved", { status: 404 });
     }
 
     const range = req.headers.get("range");
     const headers: Record<string, string> = {
-      "Content-Type": stream.mimeType || "video/mp4",
+      "Content-Type": mimeType,
       "Accept-Ranges": "bytes",
       "Cache-Control": "no-store",
     };
@@ -45,7 +68,7 @@ export async function GET(req: NextRequest) {
       fetchHeaders.Range = range;
     }
 
-    const response = await fetch(stream.url, { headers: fetchHeaders, cache: "no-store" });
+    const response = await fetch(streamUrl, { headers: fetchHeaders, cache: "no-store" });
 
     if (!response.ok && response.status !== 206) {
       console.error("Upstream stream error:", response.status, v);

@@ -1,10 +1,11 @@
-import { Search } from "lucide-react";
 import VideoCard from "@/components/VideoCard";
 import ChannelCard from "@/components/ChannelCard";
 import BrandLogo from "@/components/BrandLogo";
 import Pagination from "@/components/Pagination";
+import SearchInput from "@/components/SearchInput";
 import { searchChannels, searchVideos } from "@/lib/search";
 
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -62,18 +63,7 @@ export default async function SearchPage({
         <div className="max-w-6xl mx-auto flex items-center gap-6">
           <BrandLogo />
 
-          <form action="/search" method="GET" className="flex-1 max-w-2xl relative">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <Search className="w-4 h-4 text-zinc-500" />
-            </div>
-            <input
-              type="text"
-              name="q"
-              defaultValue={query}
-              placeholder="Search..."
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2 pl-10 pr-4 text-sm outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder:text-zinc-600"
-            />
-          </form>
+          <SearchInput size="sm" initialValue={query} placeholder="Search..." />
         </div>
       </header>
 
