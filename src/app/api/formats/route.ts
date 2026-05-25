@@ -3,6 +3,7 @@ import { getVideoQualities } from "@/lib/youtube";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

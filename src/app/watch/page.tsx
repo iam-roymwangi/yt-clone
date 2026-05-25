@@ -4,6 +4,9 @@ import Player from "@/components/Player";
 import BrandLogo from "@/components/BrandLogo";
 import { getVideoMetadata } from "@/lib/youtube";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 async function VideoDetails({ id }: { id: string }) {
   try {
     const info = await getVideoMetadata(id);

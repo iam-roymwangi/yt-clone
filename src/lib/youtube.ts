@@ -9,6 +9,8 @@ export type VideoQuality = {
   itag: number;
   label: string;
   mimeType: string;
+  stream: "progressive" | "hls";
+  height?: number;
 };
 
 export type VideoMetadata = {
@@ -18,9 +20,14 @@ export type VideoMetadata = {
   viewCount: number;
 };
 
-type GlobalInnertube = typeof globalThis & {
+type GlobalYoutube = typeof globalThis & {
   __innertubePromise?: Promise<Innertube>;
+  __videoInfoCache?: Map<string, Promise<InnertubeVideoInfo>>;
 };
+
+type InnertubeVideoInfo = Awaited<
+  ReturnType<Innertube["getInfo"]>
+>;
 
 const UPSTREAM_HEADERS = {
   "User-Agent":
@@ -30,6 +37,18 @@ const UPSTREAM_HEADERS = {
 };
 
 export { UPSTREAM_HEADERS };
+
+/** Prevent Next.js from caching YouTube's multi-MB player script. */
+export function noCacheFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit
+): Promise<Response> {
+  const { next: _next, ...rest } = init ?? {};
+  return fetch(input, {
+    ...rest,
+    cache: "no-store",
+  });
+}
 
 function pickCombinedFormat(
   formats: Array<{
@@ -56,43 +75,125 @@ function pickCombinedFormat(
 function dedupeQualities(qualities: VideoQuality[]): VideoQuality[] {
   const seen = new Set<string>();
   return qualities.filter((q) => {
-    if (seen.has(q.label)) return false;
-    seen.add(q.label);
+    const key = `${q.stream}-${q.label}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }
 
-async function getInnertube(): Promise<Innertube> {
-  const g = globalThis as GlobalInnertube;
+export async function getInnertube(): Promise<Innertube> {
+  const g = globalThis as GlobalYoutube;
   if (!g.__innertubePromise) {
     g.__innertubePromise = (async () => {
       const { Innertube, Platform } = await import("youtubei.js");
       Platform.shim.eval = async (data: { output: string }) =>
         new Function(data.output)();
-      return Innertube.create();
+      Platform.shim.fetch = noCacheFetch;
+      return Innertube.create({ fetch: noCacheFetch });
     })();
   }
   return g.__innertubePromise;
 }
 
-async function getQualitiesFromYoutubei(
+export async function getCachedVideoInfo(
   videoId: string
-): Promise<VideoQuality[]> {
-  const yt = await getInnertube();
-  const info = await yt.getInfo(videoId);
-  const formats = (info.streaming_data?.formats ?? []).filter(
-    (f) => f.has_video && f.has_audio
-  );
+): Promise<InnertubeVideoInfo> {
+  const g = globalThis as GlobalYoutube;
+  if (!g.__videoInfoCache) {
+    g.__videoInfoCache = new Map();
+  }
 
-  const qualities = formats
+  let cached = g.__videoInfoCache.get(videoId);
+  if (!cached) {
+    const yt = await getInnertube();
+    cached = yt.getInfo(videoId);
+    g.__videoInfoCache.set(videoId, cached);
+    cached.finally(() => {
+      setTimeout(() => g.__videoInfoCache?.delete(videoId), 60_000);
+    });
+  }
+  return cached;
+}
+
+function qualitiesFromCombinedFormats(
+  formats: Array<{
+    itag: number;
+    has_video?: boolean;
+    has_audio?: boolean;
+    height?: number;
+    quality_label?: string;
+    mime_type?: string;
+  }>
+): VideoQuality[] {
+  return formats
+    .filter((f) => f.has_video && f.has_audio)
     .sort((a, b) => (b.height ?? 0) - (a.height ?? 0))
     .map((f) => ({
       itag: f.itag,
       label: f.quality_label || (f.height ? `${f.height}p` : `itag ${f.itag}`),
       mimeType: f.mime_type?.split(";")[0] ?? "video/mp4",
+      stream: "progressive" as const,
+      height: f.height,
     }));
+}
 
-  return dedupeQualities(qualities);
+async function parseHlsQualities(
+  manifestUrl: string
+): Promise<VideoQuality[]> {
+  const res = await noCacheFetch(manifestUrl, { headers: UPSTREAM_HEADERS });
+  if (!res.ok) return [];
+
+  const text = await res.text();
+  const lines = text.split("\n");
+  const qualities: VideoQuality[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line.startsWith("#EXT-X-STREAM-INF:")) continue;
+
+    const heightMatch = line.match(/RESOLUTION=\d+x(\d+)/);
+    const height = heightMatch ? parseInt(heightMatch[1], 10) : 0;
+    if (!height) continue;
+
+    qualities.push({
+      itag: 10000 + height,
+      label: `${height}p`,
+      mimeType: "application/x-mpegURL",
+      stream: "hls",
+      height,
+    });
+  }
+
+  return dedupeQualities(
+    qualities.sort((a, b) => (b.height ?? 0) - (a.height ?? 0))
+  );
+}
+
+async function getQualitiesFromYoutubei(
+  videoId: string
+): Promise<VideoQuality[]> {
+  const info = await getCachedVideoInfo(videoId);
+  const streaming = info.streaming_data;
+  if (!streaming) return [];
+
+  const allFormats = [
+    ...(streaming.formats ?? []),
+    ...(streaming.adaptive_formats ?? []),
+  ];
+
+  const progressive = dedupeQualities(qualitiesFromCombinedFormats(allFormats));
+
+  if (streaming.hls_manifest_url) {
+    const hls = await parseHlsQualities(streaming.hls_manifest_url);
+    if (hls.length > 0) {
+      return [...hls, ...progressive.filter(
+        (p) => !hls.some((h) => h.label === p.label)
+      )];
+    }
+  }
+
+  return progressive;
 }
 
 async function getQualitiesFromYoutubeExt(
@@ -109,6 +210,8 @@ async function getQualitiesFromYoutubeExt(
       itag: f.itag!,
       label: f.qualityLabel || (f.height ? `${f.height}p` : `itag ${f.itag}`),
       mimeType: f.mimeType?.split(";")[0] ?? "video/mp4",
+      stream: "progressive" as const,
+      height: f.height,
     }));
 
   return dedupeQualities(qualities);
@@ -128,6 +231,8 @@ async function getQualitiesFromYtdl(
       label:
         f.qualityLabel || (f.height ? `${f.height}p` : `itag ${f.itag}`),
       mimeType: f.mimeType?.split(";")[0] ?? "video/mp4",
+      stream: "progressive" as const,
+      height: f.height,
     }));
 
   return dedupeQualities(qualities);
@@ -154,16 +259,90 @@ export async function getVideoQualities(
   return [];
 }
 
+export async function getHlsManifestUrl(
+  videoId: string
+): Promise<string | null> {
+  try {
+    const info = await getCachedVideoInfo(videoId);
+    return info.streaming_data?.hls_manifest_url ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function rewriteHlsManifest(
+  body: string,
+  proxyOrigin: string,
+  baseUrl?: string
+): string {
+  return body
+    .split("\n")
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) return line;
+
+      let absolute = trimmed;
+      if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+        if (!baseUrl) return line;
+        try {
+          absolute = new URL(trimmed, baseUrl).href;
+        } catch {
+          return line;
+        }
+      }
+
+      return `${proxyOrigin}/api/proxy?url=${encodeURIComponent(absolute)}`;
+    })
+    .join("\n");
+}
+
+export async function getHlsPlaylistForHeight(
+  videoId: string,
+  height: number,
+  proxyOrigin: string
+): Promise<string | null> {
+  const manifestUrl = await getHlsManifestUrl(videoId);
+  if (!manifestUrl) return null;
+
+  const res = await noCacheFetch(manifestUrl, { headers: UPSTREAM_HEADERS });
+  if (!res.ok) return null;
+
+  const master = await res.text();
+  const lines = master.split("\n");
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line.startsWith("#EXT-X-STREAM-INF:")) continue;
+
+    const heightMatch = line.match(/RESOLUTION=\d+x(\d+)/);
+    const variantHeight = heightMatch ? parseInt(heightMatch[1], 10) : 0;
+    if (variantHeight !== height) continue;
+
+    const variantUrl = lines[i + 1]?.trim();
+    if (!variantUrl?.startsWith("http")) continue;
+
+    const variantRes = await noCacheFetch(variantUrl, {
+      headers: UPSTREAM_HEADERS,
+    });
+    if (!variantRes.ok) return null;
+
+    const variantBody = await variantRes.text();
+    return rewriteHlsManifest(variantBody, proxyOrigin, variantUrl);
+  }
+
+  return null;
+}
+
 async function getStreamUrlFromYoutubei(
   videoId: string,
   itag?: number
 ): Promise<StreamResult | null> {
   const yt = await getInnertube();
-  const info = await yt.getInfo(videoId);
+  const info = await getCachedVideoInfo(videoId);
   const format = itag
     ? info.chooseFormat({ itag })
-    : (info.chooseFormat({ type: "video+audio", quality: "bestefficiency" }) ??
-      info.chooseFormat({ type: "video+audio", quality: "best" }));
+    : (info.chooseFormat({ type: "video+audio", quality: "best" }) ??
+      info.chooseFormat({ type: "video+audio", quality: "bestefficiency" }));
 
   if (!format) return null;
 
@@ -248,8 +427,7 @@ export async function getVideoMetadata(
   videoId: string
 ): Promise<VideoMetadata> {
   try {
-    const yt = await getInnertube();
-    const info = await yt.getInfo(videoId);
+    const info = await getCachedVideoInfo(videoId);
     return {
       title: info.basic_info.title ?? "Unknown",
       description: info.basic_info.short_description ?? "",

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getVideoMetadata } from "@/lib/youtube";
+import { getChannelVideos } from "@/lib/channel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -7,19 +7,22 @@ export const fetchCache = "force-no-store";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const v = searchParams.get("v");
+  const id = searchParams.get("id");
+  const pageParam = searchParams.get("page");
 
-  if (!v) {
-    return NextResponse.json({ error: "Missing video ID" }, { status: 400 });
+  if (!id) {
+    return NextResponse.json({ error: "Missing channel ID" }, { status: 400 });
   }
 
+  const page = pageParam ? Math.max(0, parseInt(pageParam, 10)) : 0;
+
   try {
-    const metadata = await getVideoMetadata(v);
-    return NextResponse.json(metadata);
+    const result = await getChannelVideos(id, page);
+    return NextResponse.json(result);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to fetch video info", details: message },
+      { error: "Failed to load channel", details: message },
       { status: 500 }
     );
   }

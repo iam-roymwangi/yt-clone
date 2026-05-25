@@ -13,14 +13,29 @@ export default function Home() {
     e.preventDefault();
     if (!query.trim()) return;
 
-    const match = query.match(
+    const videoMatch = query.match(
       /(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
     );
-    if (match && match[1]) {
-      router.push(`/watch?v=${match[1]}`);
-    } else {
-      router.push(`/search?q=${encodeURIComponent(query)}`);
+    if (videoMatch?.[1]) {
+      router.push(`/watch?v=${videoMatch[1]}`);
+      return;
     }
+
+    const channelMatch = query.match(
+      /youtube\.com\/channel\/(UC[\w-]{20,})/
+    );
+    if (channelMatch?.[1]) {
+      router.push(`/channel/${channelMatch[1]}`);
+      return;
+    }
+
+    const handleMatch = query.match(/youtube\.com\/@([\w.-]+)/);
+    if (handleMatch?.[1]) {
+      router.push(`/channel/@${handleMatch[1]}`);
+      return;
+    }
+
+    router.push(`/search?q=${encodeURIComponent(query)}`);
   };
 
   return (
