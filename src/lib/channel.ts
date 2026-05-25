@@ -62,7 +62,6 @@ export async function getChannelVideos(
     header?.title?.toString?.() ??
     "Channel";
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let feed: any = channel.has_videos ? await channel.getVideos() : channel;
 
   for (let i = 0; i < page; i++) {

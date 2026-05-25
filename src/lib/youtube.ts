@@ -291,6 +291,11 @@ export function rewriteHlsManifest(
         }
       }
 
+      // Append alr=yes to bypass IP address verification on googlevideo.com CDN
+      if (!absolute.includes("alr=")) {
+        absolute += (absolute.includes("?") ? "&" : "?") + "alr=yes";
+      }
+
       return `${proxyOrigin}/api/proxy?url=${encodeURIComponent(absolute)}`;
     })
     .join("\n");
