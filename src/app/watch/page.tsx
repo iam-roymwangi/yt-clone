@@ -4,7 +4,6 @@ import BrandLogo from "@/components/BrandLogo";
 import SearchInput from "@/components/SearchInput";
 import { getVideoMetadata } from "@/lib/youtube";
 
-export const runtime = "edge";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -28,9 +27,13 @@ async function VideoDetails({ id }: { id: string }) {
         </div>
       </div>
     );
-  } catch {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     return (
-      <div className="mt-4 text-red-500">Failed to load video details.</div>
+      <div className="mt-4 text-red-500 bg-red-950/20 border border-red-900/50 rounded-xl p-4">
+        <p className="font-semibold">Failed to load video details</p>
+        <p className="text-sm text-red-400/80 mt-1">{message}</p>
+      </div>
     );
   }
 }

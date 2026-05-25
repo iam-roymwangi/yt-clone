@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStreamUrl } from "@/lib/youtube";
+import { getStreamUrlNode } from "@/lib/youtube-node";
 
-export const runtime = "edge";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -13,7 +12,7 @@ const UPSTREAM_HEADERS = {
 };
 
 export async function GET(req: NextRequest) {
-  const { searchParams, origin } = new URL(req.url);
+  const { searchParams } = new URL(req.url);
   const v = searchParams.get("v");
   const itag = searchParams.get("itag");
 
@@ -25,31 +24,10 @@ export async function GET(req: NextRequest) {
     let streamUrl: string | null = null;
     let mimeType = "video/mp4";
 
-    // 1. Try resolving using Edge-compatible youtubei first
-    try {
-      const edgeStream = await getStreamUrl(v, itag ? parseInt(itag, 10) : undefined);
-      if (edgeStream && edgeStream.url) {
-        streamUrl = edgeStream.url;
-        mimeType = edgeStream.mimeType;
-      }
-    } catch (err) {
-      console.warn("Edge stream resolution failed, falling back to node resolver:", err);
-    }
-
-    // 2. If Edge resolution failed, fallback to Node.js resolver route
-    if (!streamUrl) {
-      const resolveUrl = `${origin}/api/resolve?v=${v}${itag ? `&itag=${itag}` : ""}`;
-      const resolveRes = await fetch(resolveUrl, { cache: "no-store" });
-      if (!resolveRes.ok) {
-        return new NextResponse("Failed to resolve stream", { status: resolveRes.status });
-      }
-
-      const stream = await resolveRes.json();
-      if (!stream || !stream.url) {
-        return new NextResponse("No stream URL resolved", { status: 404 });
-      }
-      streamUrl = stream.url;
-      mimeType = stream.mimeType || "video/mp4";
+    const resolved = await getStreamUrlNode(v, itag ? parseInt(itag, 10) : undefined);
+    if (resolved && resolved.url) {
+      streamUrl = resolved.url;
+      mimeType = resolved.mimeType;
     }
 
     if (!streamUrl) {

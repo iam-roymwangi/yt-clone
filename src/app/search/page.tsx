@@ -5,7 +5,6 @@ import Pagination from "@/components/Pagination";
 import SearchInput from "@/components/SearchInput";
 import { searchChannels, searchVideos } from "@/lib/search";
 
-export const runtime = "edge";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 

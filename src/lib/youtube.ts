@@ -107,9 +107,34 @@ export async function getCachedVideoInfo(
   let cached = g.__videoInfoCache.get(videoId);
   if (!cached) {
     const yt = await getInnertube();
-    cached = yt.getInfo(videoId);
+    
+    const fetchInfo = async () => {
+      const clients: Array<"WEB" | "TV" | "MWEB" | "ANDROID"> = ["WEB", "TV", "MWEB", "ANDROID"];
+      let lastError: any = null;
+      
+      for (const client of clients) {
+        try {
+          console.log(`[youtubei] Fetching video info with client: ${client}`);
+          const info = await yt.getInfo(videoId, { client });
+          const status = info.playability_status?.status;
+          if (status === "OK") {
+            return info;
+          }
+          console.warn(`[youtubei] Client ${client} returned playability status: ${status}`);
+          lastError = new Error(`Playability status: ${status}. Reason: ${info.playability_status?.reason || "unknown"}`);
+        } catch (err) {
+          console.error(`[youtubei] Client ${client} failed:`, err);
+          lastError = err;
+        }
+      }
+      throw lastError || new Error("Failed to fetch video info from all clients");
+    };
+
+    cached = fetchInfo();
     g.__videoInfoCache.set(videoId, cached);
-    cached.finally(() => {
+    cached.catch(() => {
+      g.__videoInfoCache?.delete(videoId);
+    }).finally(() => {
       setTimeout(() => g.__videoInfoCache?.delete(videoId), 60_000);
     });
   }
