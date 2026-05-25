@@ -2,14 +2,14 @@ import { Suspense } from "react";
 import Player from "@/components/Player";
 import BrandLogo from "@/components/BrandLogo";
 import SearchInput from "@/components/SearchInput";
-import { getVideoMetadata } from "@/lib/youtube";
+import { getVideoMetadataNode } from "@/lib/youtube-node";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 async function VideoDetails({ id }: { id: string }) {
   try {
-    const info = await getVideoMetadata(id);
+    const info = await getVideoMetadataNode(id);
 
     return (
       <div className="mt-4 flex flex-col gap-4">

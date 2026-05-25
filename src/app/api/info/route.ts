@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getVideoMetadata } from "@/lib/youtube";
+import { getVideoMetadataNode } from "@/lib/youtube-node";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const metadata = await getVideoMetadata(v);
+    const metadata = await getVideoMetadataNode(v);
     return NextResponse.json(metadata);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";

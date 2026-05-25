@@ -3,9 +3,11 @@ import { videoInfo, getFormats } from "youtube-ext";
 import {
   StreamResult,
   VideoQuality,
+  VideoMetadata,
   getCachedVideoInfo,
   getStreamUrl as getStreamUrlEdge,
   getVideoQualities as getVideoQualitiesEdge,
+  getVideoMetadata as getVideoMetadataEdge,
   dedupeQualities,
   pickCombinedFormat,
 } from "./youtube";
@@ -154,4 +156,51 @@ export async function getStreamUrlNode(
   }
 
   return null;
+}
+
+export async function getVideoMetadataNode(
+  videoId: string
+): Promise<VideoMetadata> {
+  // 1. Try Edge-compatible (youtubei)
+  try {
+    const edgeMetadata = await getVideoMetadataEdge(videoId);
+    return edgeMetadata;
+  } catch (err) {
+    console.warn("[getVideoMetadataNode] Edge/youtubei metadata failed, trying fallbacks:", err);
+  }
+
+  // 2. Try youtube-ext fallback
+  try {
+    console.log("[getVideoMetadataNode] Trying youtube-ext fallback");
+    const info = await videoInfo(videoId);
+    if (info && info.title) {
+      const views = info.views?.text?.replace(/\D/g, "") ?? "0";
+      return {
+        title: info.title,
+        description: info.description || "",
+        author: info.channel?.name ?? "Unknown Author",
+        viewCount: parseInt(views, 10) || 0,
+      };
+    }
+  } catch (err) {
+    console.error("[getVideoMetadataNode] youtube-ext metadata fallback failed:", err);
+  }
+
+  // 3. Try ytdl-core fallback
+  try {
+    console.log("[getVideoMetadataNode] Trying ytdl-core fallback");
+    const info = await ytdl.default.getInfo(videoId);
+    if (info && info.videoDetails && info.videoDetails.title) {
+      return {
+        title: info.videoDetails.title,
+        description: info.videoDetails.description || "",
+        author: info.videoDetails.author.name || "Unknown Author",
+        viewCount: parseInt(info.videoDetails.viewCount, 10) || 0,
+      };
+    }
+  } catch (err) {
+    console.error("[getVideoMetadataNode] ytdl-core metadata fallback failed:", err);
+  }
+
+  throw new Error("All metadata resolvers failed to fetch video details");
 }
