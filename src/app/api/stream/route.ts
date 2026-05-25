@@ -1,35 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStreamUrl, UPSTREAM_HEADERS } from "@/lib/youtube";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-export const maxDuration = 60;
+
+const UPSTREAM_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  Referer: "https://www.youtube.com/",
+  Origin: "https://www.youtube.com",
+};
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  const { searchParams, origin } = new URL(req.url);
   const v = searchParams.get("v");
-  const itagParam = searchParams.get("itag");
-  const itag = itagParam ? parseInt(itagParam, 10) : undefined;
+  const itag = searchParams.get("itag");
 
   if (!v) {
     return new NextResponse("Missing video ID", { status: 400 });
   }
 
-  if (itagParam && (isNaN(itag!) || itag! <= 0)) {
-    return new NextResponse("Invalid itag", { status: 400 });
-  }
-
   try {
-    const range = req.headers.get("range");
-    const stream = await getStreamUrl(v, itag);
-
-    if (!stream) {
-      return new NextResponse("No suitable format found", { status: 404 });
+    // Fetch deciphered stream URL from the Node.js resolver route
+    const resolveUrl = `${origin}/api/resolve?v=${v}${itag ? `&itag=${itag}` : ""}`;
+    const resolveRes = await fetch(resolveUrl, { cache: "no-store" });
+    if (!resolveRes.ok) {
+      return new NextResponse("Failed to resolve stream", { status: resolveRes.status });
     }
 
+    const stream = await resolveRes.json();
+    if (!stream || !stream.url) {
+      return new NextResponse("No stream URL resolved", { status: 404 });
+    }
+
+    const range = req.headers.get("range");
     const headers: Record<string, string> = {
-      "Content-Type": stream.mimeType,
+      "Content-Type": stream.mimeType || "video/mp4",
       "Accept-Ranges": "bytes",
       "Cache-Control": "no-store",
     };
@@ -39,7 +45,7 @@ export async function GET(req: NextRequest) {
       fetchHeaders.Range = range;
     }
 
-    const response = await fetch(stream.url, { headers: fetchHeaders });
+    const response = await fetch(stream.url, { headers: fetchHeaders, cache: "no-store" });
 
     if (!response.ok && response.status !== 206) {
       console.error("Upstream stream error:", response.status, v);

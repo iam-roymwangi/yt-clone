@@ -346,14 +346,22 @@ async function getStreamUrlFromYoutubei(
 
   if (!format) return null;
 
-  const url = await format.decipher(yt.session.player);
+  let url = await format.decipher(yt.session.player);
   if (!url) return null;
+
+  // alr=yes disables IP-address verification on googlevideo.com CDN,
+  // allowing server-side proxying without a 403 when the proxy IP
+  // differs from the IP bound at URL resolution time.
+  if (!url.includes("alr=")) {
+    url += (url.includes("?") ? "&" : "?") + "alr=yes";
+  }
 
   return {
     url,
     mimeType: format.mime_type?.split(";")[0] ?? "video/mp4",
   };
 }
+
 
 async function getStreamUrlFromYoutubeExt(
   videoId: string,
@@ -369,11 +377,17 @@ async function getStreamUrlFromYoutubeExt(
 
   if (!format?.url) return null;
 
+  let url = format.url;
+  if (!url.includes("alr=")) {
+    url += (url.includes("?") ? "&" : "?") + "alr=yes";
+  }
+
   return {
-    url: format.url,
+    url,
     mimeType: format.mimeType?.split(";")[0] ?? "video/mp4",
   };
 }
+
 
 async function getStreamUrlFromYtdl(
   videoId: string,
@@ -395,31 +409,44 @@ async function getStreamUrlFromYtdl(
 
   if (!format?.url) return null;
 
+  let url = format.url;
+  if (!url.includes("alr=")) {
+    url += (url.includes("?") ? "&" : "?") + "alr=yes";
+  }
+
   return {
-    url: format.url,
+    url,
     mimeType: format.mimeType?.split(";")[0] ?? "video/mp4",
   };
 }
+
 
 export async function getStreamUrl(
   videoId: string,
   itag?: number
 ): Promise<StreamResult | null> {
+  console.log(`[getStreamUrl] Resolving stream for videoId=${videoId}, itag=${itag}`);
   const attempts = [
-    () => getStreamUrlFromYoutubei(videoId, itag),
-    () => getStreamUrlFromYoutubeExt(videoId, itag),
-    () => getStreamUrlFromYtdl(videoId, itag),
+    { name: "youtubei", fn: () => getStreamUrlFromYoutubei(videoId, itag) },
+    { name: "youtube-ext", fn: () => getStreamUrlFromYoutubeExt(videoId, itag) },
+    { name: "ytdl", fn: () => getStreamUrlFromYtdl(videoId, itag) },
   ];
 
   for (const attempt of attempts) {
     try {
-      const result = await attempt();
-      if (result) return result;
+      console.log(`[getStreamUrl] Trying resolver: ${attempt.name}`);
+      const result = await attempt.fn();
+      if (result) {
+        console.log(`[getStreamUrl] Resolver ${attempt.name} succeeded! URL: ${result.url.substring(0, 80)}...`);
+        return result;
+      }
+      console.log(`[getStreamUrl] Resolver ${attempt.name} returned null`);
     } catch (err) {
-      console.error("Stream resolver failed:", err);
+      console.error(`[getStreamUrl] Resolver ${attempt.name} failed:`, err);
     }
   }
 
+  console.log(`[getStreamUrl] All resolvers failed for videoId=${videoId}`);
   return null;
 }
 

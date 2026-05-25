@@ -1,12 +1,9 @@
 {
   "functions": {
-    "src/app/api/stream/route.ts": {
+    "src/app/api/resolve/route.ts": {
       "maxDuration": 60
     },
     "src/app/api/hls/route.ts": {
-      "maxDuration": 60
-    },
-    "src/app/api/proxy/route.ts": {
       "maxDuration": 60
     },
     "src/app/api/formats/route.ts": {

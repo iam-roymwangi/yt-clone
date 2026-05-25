@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UPSTREAM_HEADERS } from "@/lib/youtube";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -33,11 +32,13 @@ export async function GET(req: NextRequest) {
 
   try {
     const range = req.headers.get("range");
-    const headers: Record<string, string> = { ...UPSTREAM_HEADERS };
-    if (range) headers.Range = range;
+    const fetchHeaders = new Headers();
+    if (range) {
+      fetchHeaders.set("Range", range);
+    }
 
     const response = await fetch(target, {
-      headers,
+      headers: fetchHeaders,
       cache: "no-store",
       redirect: "follow",
     });
