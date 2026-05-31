@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import VideoCard from "@/components/VideoCard";
 import Pagination from "@/components/Pagination";
@@ -42,21 +41,9 @@ export default async function ChannelPage({
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
-      <header className="sticky top-0 z-10 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center gap-6">
+      <header className="sticky top-0 z-10 border-b border-zinc-900 bg-zinc-950/80 px-6 py-4 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center">
           <BrandLogo />
-
-          <form action="/search" method="GET" className="flex-1 max-w-2xl relative">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <Search className="w-4 h-4 text-zinc-500" />
-            </div>
-            <input
-              type="text"
-              name="q"
-              placeholder="Search..."
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2 pl-10 pr-4 text-sm outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder:text-zinc-600"
-            />
-          </form>
         </div>
       </header>
 

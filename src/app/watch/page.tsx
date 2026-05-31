@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import Player from "@/components/Player";
 import BrandLogo from "@/components/BrandLogo";
-import SearchInput from "@/components/SearchInput";
 import { getVideoMetadataNode } from "@/lib/youtube-node";
 
 export const dynamic = "force-dynamic";
@@ -55,11 +54,9 @@ export default function WatchPage({
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
-      <header className="sticky top-0 z-10 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center gap-6">
+      <header className="sticky top-0 z-10 border-b border-zinc-900 bg-zinc-950/80 px-6 py-4 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center">
           <BrandLogo />
-
-          <SearchInput size="sm" placeholder="Search..." />
         </div>
       </header>
 

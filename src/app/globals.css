@@ -31,3 +31,32 @@ body {
     text-wrap: balance;
   }
 }
+
+.local-video-progress {
+  background: linear-gradient(
+    to right,
+    rgb(124 58 237) 0%,
+    rgb(124 58 237) var(--progress),
+    rgb(63 63 70) var(--progress),
+    rgb(63 63 70) var(--buffer),
+    rgb(39 39 42) var(--buffer)
+  );
+}
+
+.local-video-progress::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: rgb(167 139 250);
+  cursor: pointer;
+}
+
+.local-video-progress::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 9999px;
+  background: rgb(167 139 250);
+  cursor: pointer;
+}

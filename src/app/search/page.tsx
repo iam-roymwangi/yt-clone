@@ -2,7 +2,6 @@ import VideoCard from "@/components/VideoCard";
 import ChannelCard from "@/components/ChannelCard";
 import BrandLogo from "@/components/BrandLogo";
 import Pagination from "@/components/Pagination";
-import SearchInput from "@/components/SearchInput";
 import { searchChannels, searchVideos } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
@@ -58,16 +57,22 @@ export default async function SearchPage({
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
-      <header className="sticky top-0 z-10 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center gap-6">
+      <header className="sticky top-0 z-10 border-b border-zinc-900 bg-zinc-950/80 px-6 py-4 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center">
           <BrandLogo />
-
-          <SearchInput size="sm" initialValue={query} placeholder="Search..." />
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-6">
-        <div className="flex flex-wrap items-center gap-3 mb-6">
+      <main className="mx-auto max-w-6xl p-6">
+        <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-400">
+          YouTube search is temporarily unavailable. Browse the{" "}
+          <a href="/library" className="font-medium text-violet-400 hover:text-violet-300">
+            local library
+          </a>{" "}
+          instead.
+        </div>
+
+        <div className="mb-6 flex flex-wrap items-center gap-3">
           <h2 className="text-xl font-semibold">
             Results for &quot;{query}&quot;
           </h2>
