@@ -6,6 +6,7 @@ import { Maximize2, Pause, Play, Volume2, VolumeX } from "lucide-react";
 type LocalVideoPlayerProps = {
   src: string;
   title: string;
+  onError?: () => void;
 };
 
 function formatTime(seconds: number): string {
@@ -19,7 +20,7 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export default function LocalVideoPlayer({ src, title }: LocalVideoPlayerProps) {
+export default function LocalVideoPlayer({ src, title, onError }: LocalVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -44,11 +45,14 @@ export default function LocalVideoPlayer({ src, title }: LocalVideoPlayerProps) 
     setMuted(el.muted);
   }, []);
 
-  const seek = useCallback((value: number) => {
-    const el = videoRef.current;
-    if (!el || !duration) return;
-    el.currentTime = (value / 100) * duration;
-  }, [duration]);
+  const seek = useCallback(
+    (value: number) => {
+      const el = videoRef.current;
+      if (!el || !duration) return;
+      el.currentTime = (value / 100) * duration;
+    },
+    [duration]
+  );
 
   const enterFullscreen = useCallback(() => {
     const el = videoRef.current;
@@ -83,6 +87,7 @@ export default function LocalVideoPlayer({ src, title }: LocalVideoPlayerProps) 
               setBuffered(el.buffered.end(el.buffered.length - 1));
             }
           }}
+          onError={() => onError?.()}
         />
 
         {!playing && (

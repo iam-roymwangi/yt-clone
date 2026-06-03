@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { Play } from "lucide-react";
-import type { LocalVideo } from "@/lib/local-videos";
+import type { VideoCardData } from "@/lib/videos";
+import { formatDuration } from "@/lib/videos";
 import VideoThumbnail from "@/components/VideoThumbnail";
 
-export default function LocalVideoCard({ video }: { video: LocalVideo }) {
+export default function LocalVideoCard({ video }: { video: VideoCardData }) {
+  const durationLabel = formatDuration(video.durationSeconds);
+
   return (
     <Link
       href={`/library/${video.id}`}
@@ -11,9 +14,9 @@ export default function LocalVideoCard({ video }: { video: LocalVideo }) {
     >
       <div className="relative aspect-video w-full overflow-hidden bg-zinc-900">
         <VideoThumbnail
-          src={video.src}
+          src={video.embedSrc}
           alt={video.title}
-          posterSrc={video.posterSrc}
+          posterSrc={video.thumbnailSrc}
           className="absolute inset-0"
         />
         <div className="absolute inset-0 bg-black/20 opacity-0 transition group-hover:opacity-100" />
@@ -22,15 +25,17 @@ export default function LocalVideoCard({ video }: { video: LocalVideo }) {
             <Play className="ml-0.5 h-5 w-5 fill-current" />
           </span>
         </div>
-        <span className="absolute bottom-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-200 backdrop-blur-sm">
-          Local
-        </span>
+        {durationLabel && (
+          <span className="absolute bottom-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 text-[10px] font-medium text-zinc-200 backdrop-blur-sm">
+            {durationLabel}
+          </span>
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3 sm:p-4">
         <h2 className="line-clamp-2 text-sm font-semibold leading-snug text-white group-hover:text-violet-200 sm:text-base">
           {video.title}
         </h2>
-        <p className="mt-auto text-xs text-zinc-500">Streamed from CDN</p>
+        <p className="mt-auto text-xs text-zinc-500">Google Drive</p>
       </div>
     </Link>
   );

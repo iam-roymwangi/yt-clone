@@ -1,36 +1,38 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import GoogleDrivePlayer from "@/components/GoogleDrivePlayer";
 import LocalVideoCard from "@/components/LocalVideoCard";
-import LocalVideoPlayer from "@/components/LocalVideoPlayer";
 import PageHeader from "@/components/PageHeader";
-import { getLocalVideoById, getLocalVideos } from "@/lib/local-videos";
+import { getVideoById, getVideos, toVideoCardData } from "@/lib/videos";
 
-export function generateStaticParams() {
-  return getLocalVideos().map((video) => ({ id: video.id }));
-}
+export const dynamic = "force-dynamic";
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
   params: { id: string };
 }) {
-  const video = getLocalVideoById(params.id);
+  const video = await getVideoById(params.id);
   if (!video) return { title: "Not found — Nexora" };
   return {
     title: `${video.title} — Nexora Library`,
-    description: `Watch ${video.title} from the local library.`,
+    description: video.description || `Watch ${video.title}.`,
   };
 }
 
-export default function LibraryWatchPage({
+export default async function LibraryWatchPage({
   params,
 }: {
   params: { id: string };
 }) {
-  const video = getLocalVideoById(params.id);
+  const video = await getVideoById(params.id);
   if (!video) notFound();
 
-  const others = getLocalVideos().filter((v) => v.id !== video.id).slice(0, 4);
+  const card = toVideoCardData(video);
+  const others = (await getVideos())
+    .filter((v) => v.id !== video.id)
+    .slice(0, 4)
+    .map(toVideoCardData);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
@@ -38,10 +40,20 @@ export default function LibraryWatchPage({
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-10">
         <div className="lg:col-span-2">
-          <LocalVideoPlayer src={video.src} title={video.title} />
+          <GoogleDrivePlayer
+            fileId={video.driveFileId}
+            title={card.title}
+            driveUrl={video.driveUrl}
+            embedSrc={card.embedSrc}
+          />
           <h1 className="mt-5 text-xl font-bold leading-snug sm:text-2xl">
             {video.title}
           </h1>
+          {video.description && (
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+              {video.description}
+            </p>
+          )}
         </div>
 
         <aside>

@@ -9,6 +9,9 @@ const nextConfig = {
       "yt-search",
       "cheerio",
     ],
+    outputFileTracingExcludes: {
+      "*": ["./public/videos/**"],
+    },
   },
   images: {
     unoptimized: true,

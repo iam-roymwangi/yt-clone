@@ -1,21 +1,24 @@
 import LocalVideoCard from "@/components/LocalVideoCard";
 import PageHeader from "@/components/PageHeader";
 import { IslandPagination } from "@/components/Pagination";
-import { getLocalVideos } from "@/lib/local-videos";
+import { getVideos, toVideoCardData } from "@/lib/videos";
 import { LIBRARY_PAGE_SIZE, libraryHref, paginate } from "@/lib/paginate";
-import { HardDrive, Wifi } from "lucide-react";
+import { Film, Link2 } from "lucide-react";
+import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Local Library — Nexora",
-  description: "Watch videos hosted on Nexora's CDN — no proxy, no rate limits.",
+  title: "Library — Nexora",
+  description: "Watch videos from Google Drive links.",
 };
 
-export default function LibraryPage({
+export default async function LibraryPage({
   searchParams,
 }: {
   searchParams: { page?: string };
 }) {
-  const allVideos = getLocalVideos();
+  const allVideos = (await getVideos()).map(toVideoCardData);
   const requestedPage = Math.max(
     1,
     parseInt(searchParams.page ?? "1", 10) || 1
@@ -29,14 +32,18 @@ export default function LibraryPage({
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <PageHeader
-        title="Local library"
-        description="Video requests coming soon!"
+        title="Video library"
+        description="Watch videos hosted on Google Drive — no sign-in required."
       />
 
       <div className="mb-8 flex flex-wrap gap-3 text-xs text-zinc-500">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1">
-          <HardDrive className="h-3.5 w-3.5 text-violet-400" />
+          <Film className="h-3.5 w-3.5 text-violet-400" />
           {totalItems} video{totalItems === 1 ? "" : "s"}
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1">
+          <Link2 className="h-3.5 w-3.5 text-violet-400" />
+          Google Drive
         </span>
       </div>
 
@@ -44,8 +51,11 @@ export default function LibraryPage({
         <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/30 px-6 py-16 text-center">
           <p className="text-lg font-medium text-zinc-300">No videos yet</p>
           <p className="mt-2 text-sm text-zinc-500">
-            Add <code className="text-violet-400">.mp4</code> files to{" "}
-            <code className="text-zinc-400">public/videos/</code> and redeploy.
+            Add a Google Drive link on the{" "}
+            <Link href="/admin" className="text-violet-400 hover:text-violet-300">
+              add video page
+            </Link>
+            .
           </p>
         </div>
       ) : (
