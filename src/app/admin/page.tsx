@@ -11,7 +11,7 @@ export default function AdminPage() {
     <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <PageHeader
         title="Add video"
-        description="Paste a public Google Drive link. No sign-in or Supabase upload required."
+        description="Paste a public Google Drive link."
       />
       <DriveVideoForm />
     </main>

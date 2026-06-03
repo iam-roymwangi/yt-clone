@@ -9,7 +9,7 @@ export default function Home() {
         <BrandLogo size="lg" link={false} alwaysShowText />
 
         <p className="max-w-md text-center text-lg text-zinc-400">
-          Watch your video library from Google Drive — no sign-in required.
+          Upload and watch videos using Google Drive Links.
         </p>
 
         <Link

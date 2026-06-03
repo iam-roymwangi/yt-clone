@@ -33,7 +33,7 @@ export default async function LibraryPage({
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <PageHeader
         title="Video library"
-        description="Watch videos hosted on Google Drive — no sign-in required."
+        description="Watch and upload videos using Google Drive Links."
       />
 
       <div className="mb-8 flex flex-wrap gap-3 text-xs text-zinc-500">
