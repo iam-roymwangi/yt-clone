@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
     "@distube/ytdl-core": "^4.16.12",
     "cheerio": "^1.2.0",
     "lucide-react": "^1.14.0",

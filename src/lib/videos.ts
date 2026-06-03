@@ -1,22 +1,15 @@
-import fs from "fs";
-import path from "path";
 import {
   driveEmbedUrl,
   driveThumbnailUrl,
-  extractDriveFileId,
 } from "@/lib/google-drive";
+import type { Video } from "@/lib/videos-store";
+import {
+  createVideo,
+  findVideoById,
+  listVideos,
+} from "@/lib/videos-store";
 
-const VIDEOS_FILE = path.join(process.cwd(), "src/data/videos.json");
-
-export type Video = {
-  id: string;
-  title: string;
-  description: string;
-  driveUrl: string;
-  driveFileId: string;
-  durationSeconds: number | null;
-  createdAt: string;
-};
+export type { Video } from "@/lib/videos-store";
 
 export type VideoCardData = {
   id: string;
@@ -30,20 +23,6 @@ export type VideoCardData = {
   durationSeconds: number | null;
   createdAt: string;
 };
-
-function readVideosFile(): Video[] {
-  try {
-    const raw = fs.readFileSync(VIDEOS_FILE, "utf-8");
-    const parsed = JSON.parse(raw) as Video[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeVideosFile(videos: Video[]) {
-  fs.writeFileSync(VIDEOS_FILE, JSON.stringify(videos, null, 2) + "\n", "utf-8");
-}
 
 export function toVideoCardData(video: Video): VideoCardData {
   return {
@@ -74,13 +53,11 @@ export function formatDuration(seconds: number | null): string {
 }
 
 export async function getVideos(): Promise<Video[]> {
-  return readVideosFile().sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  return listVideos();
 }
 
 export async function getVideoById(id: string): Promise<Video | null> {
-  return readVideosFile().find((v) => v.id === id) ?? null;
+  return findVideoById(id);
 }
 
 export async function addVideo(input: {
@@ -89,24 +66,5 @@ export async function addVideo(input: {
   driveUrl: string;
   durationSeconds?: number | null;
 }): Promise<Video> {
-  const fileId = extractDriveFileId(input.driveUrl);
-  if (!fileId) {
-    throw new Error("Invalid Google Drive link");
-  }
-
-  const video: Video = {
-    id: crypto.randomUUID(),
-    title: input.title.trim(),
-    description: input.description?.trim() ?? "",
-    driveUrl: input.driveUrl.trim(),
-    driveFileId: fileId,
-    durationSeconds: input.durationSeconds ?? null,
-    createdAt: new Date().toISOString(),
-  };
-
-  const videos = readVideosFile();
-  videos.push(video);
-  writeVideosFile(videos);
-
-  return video;
+  return createVideo(input);
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isValidDriveUrl } from "@/lib/google-drive";
+import { getStorageMode } from "@/lib/videos-store";
 import { addVideo, getVideos } from "@/lib/videos";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,16 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (getStorageMode() === "unconfigured") {
+    return NextResponse.json(
+      {
+        error:
+          "Production storage is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel, then redeploy.",
+      },
+      { status: 503 }
+    );
+  }
+
   let body: {
     title?: string;
     description?: string;
@@ -52,6 +63,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(video, { status: 201 });
   } catch (error) {
     console.error("Add video error:", error);
-    return NextResponse.json({ error: "Failed to add video" }, { status: 500 });
+    const message =
+      error instanceof Error ? error.message : "Failed to add video";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
