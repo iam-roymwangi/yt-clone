@@ -1,9 +1,11 @@
+import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { isValidDriveUrl } from "@/lib/google-drive";
 import { getStorageMode } from "@/lib/videos-store";
 import { addVideo, getVideos } from "@/lib/videos";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 export async function GET() {
   const videos = await getVideos();
@@ -60,6 +62,10 @@ export async function POST(req: NextRequest) {
       driveUrl,
       durationSeconds,
     });
+
+    revalidatePath("/library", "layout");
+    revalidatePath("/admin");
+
     return NextResponse.json(video, { status: 201 });
   } catch (error) {
     console.error("Add video error:", error);

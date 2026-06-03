@@ -10,14 +10,12 @@ export default function DriveVideoForm() {
   const [description, setDescription] = useState("");
   const [driveUrl, setDriveUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    setDone(false);
 
     try {
       const res = await fetch("/api/videos", {
@@ -28,6 +26,7 @@ export default function DriveVideoForm() {
           description,
           driveUrl,
         }),
+        cache: "no-store",
       });
 
       const data = await res.json().catch(() => ({}));
@@ -36,14 +35,14 @@ export default function DriveVideoForm() {
         throw new Error(data.error ?? "Failed to add video");
       }
 
-      setDone(true);
       setTitle("");
       setDescription("");
       setDriveUrl("");
+
+      router.push(`/library/${data.id}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add video");
-    } finally {
       setLoading(false);
     }
   }
@@ -103,10 +102,10 @@ export default function DriveVideoForm() {
           </p>
         )}
 
-        {done && (
-          <p className="flex items-center gap-2 text-sm text-emerald-400">
-            <CheckCircle2 className="h-4 w-4" />
-            Video added — open the library to watch it.
+        {loading && (
+          <p className="flex items-center gap-2 text-sm text-zinc-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Adding video…
           </p>
         )}
 
@@ -115,17 +114,8 @@ export default function DriveVideoForm() {
           disabled={!title.trim() || !driveUrl.trim() || loading}
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Adding…
-            </>
-          ) : (
-            <>
-              <Link2 className="h-4 w-4" />
-              Add to library
-            </>
-          )}
+          <Link2 className="h-4 w-4" />
+          Add to library
         </button>
       </form>
     </div>

@@ -14,7 +14,6 @@ export default function LocalVideoCard({ video }: { video: VideoCardData }) {
     >
       <div className="relative aspect-video w-full overflow-hidden bg-zinc-900">
         <VideoThumbnail
-          src={video.embedSrc}
           alt={video.title}
           posterSrc={video.thumbnailSrc}
           className="absolute inset-0"

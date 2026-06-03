@@ -1,7 +1,4 @@
-import {
-  driveEmbedUrl,
-  driveThumbnailUrl,
-} from "@/lib/google-drive";
+import { driveEmbedUrl } from "@/lib/google-drive";
 import type { Video } from "@/lib/videos-store";
 import {
   createVideo,
@@ -33,7 +30,7 @@ export function toVideoCardData(video: Video): VideoCardData {
     driveUrl: video.driveUrl,
     embedSrc: driveEmbedUrl(video.driveFileId),
     streamSrc: `/api/drive-stream/${video.driveFileId}`,
-    thumbnailSrc: driveThumbnailUrl(video.driveFileId),
+    thumbnailSrc: `/api/drive-thumbnail/${video.driveFileId}`,
     durationSeconds: video.durationSeconds,
     createdAt: video.createdAt,
   };

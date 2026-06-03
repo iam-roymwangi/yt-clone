@@ -19,7 +19,7 @@ function isVercel(): boolean {
   return process.env.VERCEL === "1";
 }
 
-function useJsonFile(): boolean {
+function shouldUseJsonFile(): boolean {
   return !isSupabaseConfigured() && !isVercel();
 }
 
@@ -59,6 +59,23 @@ function writeVideosFile(videos: Video[]) {
   fs.writeFileSync(VIDEOS_FILE, JSON.stringify(videos, null, 2) + "\n", "utf-8");
 }
 
+function sortVideos(videos: Video[]): Video[] {
+  return videos.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+function isMissingTableError(error: { code?: string }): boolean {
+  return error.code === "PGRST205";
+}
+
+const MISSING_TABLE_MSG =
+  "The videos table is missing. Open Supabase → SQL Editor, run supabase/setup.sql, then try again.";
+
+function listFromJsonFallback(): Video[] {
+  return sortVideos(readVideosFile());
+}
+
 async function getVideosFromSupabase(): Promise<Video[]> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
@@ -66,7 +83,14 @@ async function getVideosFromSupabase(): Promise<Video[]> {
     .select("id, title, description, r2_key, thumbnail_url, duration_seconds, created_at")
     .order("created_at", { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    if (isMissingTableError(error)) {
+      console.warn("[videos]", MISSING_TABLE_MSG);
+      if (!isVercel()) return listFromJsonFallback();
+      return [];
+    }
+    throw error;
+  }
   return (data ?? []).map(rowToVideo);
 }
 
@@ -78,7 +102,15 @@ async function getVideoByIdFromSupabase(id: string): Promise<Video | null> {
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    if (isMissingTableError(error)) {
+      if (!isVercel()) {
+        return readVideosFile().find((v) => v.id === id) ?? null;
+      }
+      return null;
+    }
+    throw error;
+  }
   return data ? rowToVideo(data) : null;
 }
 
@@ -109,6 +141,9 @@ async function addVideoToSupabase(input: {
     if (error.code === "23505") {
       throw new Error("This Google Drive video is already in the library.");
     }
+    if (isMissingTableError(error)) {
+      throw new Error(MISSING_TABLE_MSG);
+    }
     throw error;
   }
   return rowToVideo(data);
@@ -116,7 +151,7 @@ async function addVideoToSupabase(input: {
 
 export function getStorageMode(): "supabase" | "json" | "unconfigured" {
   if (isSupabaseConfigured()) return "supabase";
-  if (useJsonFile()) return "json";
+  if (shouldUseJsonFile()) return "json";
   return "unconfigured";
 }
 
@@ -124,10 +159,8 @@ export async function listVideos(): Promise<Video[]> {
   if (isSupabaseConfigured()) {
     return getVideosFromSupabase();
   }
-  if (useJsonFile()) {
-    return readVideosFile().sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+  if (shouldUseJsonFile()) {
+    return listFromJsonFallback();
   }
   return [];
 }
@@ -136,7 +169,7 @@ export async function findVideoById(id: string): Promise<Video | null> {
   if (isSupabaseConfigured()) {
     return getVideoByIdFromSupabase(id);
   }
-  if (useJsonFile()) {
+  if (shouldUseJsonFile()) {
     return readVideosFile().find((v) => v.id === id) ?? null;
   }
   return null;
@@ -152,7 +185,7 @@ export async function createVideo(input: {
     return addVideoToSupabase(input);
   }
 
-  if (useJsonFile()) {
+  if (shouldUseJsonFile()) {
     const fileId = extractDriveFileId(input.driveUrl);
     if (!fileId) throw new Error("Invalid Google Drive link");
 
