@@ -11,6 +11,7 @@ export type VideoCardData = {
   thumbnailSrc: string;
   durationSeconds: number | null;
   createdAt: string;
+  category: "video" | "movie";
 };
 
 export function formatDuration(seconds: number | null): string {

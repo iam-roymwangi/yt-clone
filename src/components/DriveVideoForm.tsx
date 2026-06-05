@@ -2,13 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { CheckCircle2, Link2, Loader2 } from "lucide-react";
+import { CheckCircle2, Clapperboard, Link2, Loader2, Video } from "lucide-react";
 
 export default function DriveVideoForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [driveUrl, setDriveUrl] = useState("");
+  const [category, setCategory] = useState<"video" | "movie">("video");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -25,6 +26,7 @@ export default function DriveVideoForm() {
           title,
           description,
           driveUrl,
+          category,
         }),
         cache: "no-store",
       });
@@ -83,6 +85,32 @@ export default function DriveVideoForm() {
             placeholder="Video title"
           />
         </label>
+
+        <div className="flex flex-col gap-1.5 text-sm">
+          <span className="text-zinc-400">Category</span>
+          <div className="flex gap-2">
+            {(["video", "movie"] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCategory(c)}
+                disabled={loading}
+                className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                  category === c
+                    ? "border-violet-500 bg-violet-600/20 text-violet-300"
+                    : "border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-zinc-600 hover:text-white"
+                }`}
+              >
+                {c === "movie" ? (
+                  <Clapperboard className="h-4 w-4" />
+                ) : (
+                  <Video className="h-4 w-4" />
+                )}
+                {c.charAt(0).toUpperCase() + c.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="text-zinc-400">Description</span>

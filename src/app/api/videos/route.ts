@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     description?: string;
     driveUrl?: string;
     durationSeconds?: number;
+    category?: "video" | "movie";
   };
 
   try {
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { title, description, driveUrl, durationSeconds } = body;
+  const { title, description, driveUrl, durationSeconds, category } = body;
 
   if (!title?.trim() || !driveUrl?.trim()) {
     return NextResponse.json(
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
       description,
       driveUrl,
       durationSeconds,
+      category: category === "movie" ? "movie" : "video",
     });
 
     revalidatePath("/library", "layout");

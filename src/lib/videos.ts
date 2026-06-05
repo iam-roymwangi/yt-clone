@@ -23,6 +23,7 @@ export function toVideoCardData(video: Video): VideoCardData {
     thumbnailSrc: `/api/drive-thumbnail/${video.driveFileId}`,
     durationSeconds: video.durationSeconds,
     createdAt: video.createdAt,
+    category: video.category,
   };
 }
 
@@ -40,6 +41,7 @@ export async function addVideo(input: {
   description?: string;
   driveUrl: string;
   durationSeconds?: number | null;
+  category?: "video" | "movie";
 }): Promise<Video> {
   return createVideo(input);
 }

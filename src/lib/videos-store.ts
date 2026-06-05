@@ -13,6 +13,7 @@ export type Video = {
   driveFileId: string;
   durationSeconds: number | null;
   createdAt: string;
+  category: "video" | "movie";
 };
 
 function isVercel(): boolean {
@@ -31,6 +32,7 @@ type DbRow = {
   thumbnail_url: string | null;
   duration_seconds: number | null;
   created_at: string;
+  category: string;
 };
 
 function rowToVideo(row: DbRow): Video {
@@ -42,14 +44,24 @@ function rowToVideo(row: DbRow): Video {
     driveUrl: row.thumbnail_url ?? "",
     durationSeconds: row.duration_seconds,
     createdAt: row.created_at,
+    category: row.category === "movie" ? "movie" : "video",
   };
 }
-
 function readVideosFile(): Video[] {
   try {
     const raw = fs.readFileSync(VIDEOS_FILE, "utf-8");
-    const parsed = JSON.parse(raw) as Video[];
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed = JSON.parse(raw) as Partial<Video>[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((v) => ({
+      id: v.id ?? "",
+      title: v.title ?? "",
+      description: v.description ?? "",
+      driveUrl: v.driveUrl ?? "",
+      driveFileId: v.driveFileId ?? "",
+      durationSeconds: v.durationSeconds ?? null,
+      createdAt: v.createdAt ?? new Date().toISOString(),
+      category: v.category === "movie" ? "movie" : "video",
+    }));
   } catch {
     return [];
   }
@@ -80,7 +92,7 @@ async function getVideosFromSupabase(): Promise<Video[]> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("videos")
-    .select("id, title, description, r2_key, thumbnail_url, duration_seconds, created_at")
+    .select("id, title, description, r2_key, thumbnail_url, duration_seconds, created_at, category")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -98,7 +110,7 @@ async function getVideoByIdFromSupabase(id: string): Promise<Video | null> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("videos")
-    .select("id, title, description, r2_key, thumbnail_url, duration_seconds, created_at")
+    .select("id, title, description, r2_key, thumbnail_url, duration_seconds, created_at, category")
     .eq("id", id)
     .maybeSingle();
 
@@ -119,6 +131,7 @@ async function addVideoToSupabase(input: {
   description?: string;
   driveUrl: string;
   durationSeconds?: number | null;
+  category?: "video" | "movie";
 }): Promise<Video> {
   const fileId = extractDriveFileId(input.driveUrl);
   if (!fileId) throw new Error("Invalid Google Drive link");
@@ -132,9 +145,10 @@ async function addVideoToSupabase(input: {
       r2_key: fileId,
       thumbnail_url: input.driveUrl.trim(),
       duration_seconds: input.durationSeconds ?? null,
+      category: input.category ?? "video",
       uploaded_by: null,
     })
-    .select("id, title, description, r2_key, thumbnail_url, duration_seconds, created_at")
+    .select("id, title, description, r2_key, thumbnail_url, duration_seconds, created_at, category")
     .single();
 
   if (error) {
@@ -180,6 +194,7 @@ export async function createVideo(input: {
   description?: string;
   driveUrl: string;
   durationSeconds?: number | null;
+  category?: "video" | "movie";
 }): Promise<Video> {
   if (isSupabaseConfigured()) {
     return addVideoToSupabase(input);
@@ -197,6 +212,7 @@ export async function createVideo(input: {
       driveFileId: fileId,
       durationSeconds: input.durationSeconds ?? null,
       createdAt: new Date().toISOString(),
+      category: input.category ?? "video",
     };
 
     const videos = readVideosFile();

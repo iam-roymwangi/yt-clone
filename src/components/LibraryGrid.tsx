@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, SortAsc, Clock, Film, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, SortAsc, Clock, Film, ChevronLeft, ChevronRight, Clapperboard, Video } from "lucide-react";
 import LocalVideoCard from "@/components/LocalVideoCard";
 import { paginate, LIBRARY_PAGE_SIZE } from "@/lib/paginate";
 import type { VideoCardData } from "@/lib/types";
@@ -30,10 +30,15 @@ function pageRange(current: number, total: number): (number | "ellipsis")[] {
 export default function LibraryGrid({ videos }: { videos: VideoCardData[] }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("newest");
+  const [category, setCategory] = useState<"all" | "video" | "movie">("all");
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     let list = [...videos];
+    if (category !== "all") {
+      // treat missing category as "video" for legacy entries
+      list = list.filter((v) => (v.category ?? "video") === category);
+    }
     if (query.trim()) {
       const q = query.toLowerCase();
       list = list.filter(
@@ -55,18 +60,42 @@ export default function LibraryGrid({ videos }: { videos: VideoCardData[] }) {
       }
     });
     return list;
-  }, [videos, query, sort]);
+  }, [videos, query, sort, category]);
 
   const { items, currentPage, totalPages } = paginate(filtered, page, LIBRARY_PAGE_SIZE);
 
   const handleQuery = (v: string) => { setQuery(v); setPage(1); };
   const handleSort = (v: SortKey) => { setSort(v); setPage(1); };
+  const handleCategory = (v: "all" | "video" | "movie") => { setCategory(v); setPage(1); };
   const goTo = (p: number) => setPage(Math.max(1, Math.min(p, totalPages)));
   const pages = pageRange(currentPage, totalPages);
 
   return (
     <>
-      {/* Search + filter bar */}
+      {/* Category filter chips */}
+      <div className="mb-4 flex gap-2">
+        {([
+          { value: "all", label: "All", icon: null },
+          { value: "video", label: "Videos", icon: <Video className="h-3.5 w-3.5" /> },
+          { value: "movie", label: "Movies", icon: <Clapperboard className="h-3.5 w-3.5" /> },
+        ] as const).map(({ value, label, icon }) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => handleCategory(value)}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition ${
+              category === value
+                ? "border-violet-500 bg-violet-600/20 text-violet-300"
+                : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-600 hover:text-white"
+            }`}
+          >
+            {icon}
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search + sort bar */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
