@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import GoogleDrivePlayer from "@/components/GoogleDrivePlayer";
+import DrivePlayerWithMiniPlayer from "@/components/DrivePlayerWithMiniPlayer";
 import LocalVideoCard from "@/components/LocalVideoCard";
 import PageHeader from "@/components/PageHeader";
 import { getVideoById, getVideos, toVideoCardData } from "@/lib/videos";
@@ -42,11 +42,12 @@ export default async function LibraryWatchPage({
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-10">
         <div className="lg:col-span-2">
-          <GoogleDrivePlayer
+          <DrivePlayerWithMiniPlayer
             fileId={video.driveFileId}
             title={card.title}
             driveUrl={video.driveUrl}
             embedSrc={card.embedSrc}
+            libraryId={video.id}
           />
           <h1 className="mt-5 text-xl font-bold leading-snug sm:text-2xl">
             {video.title}

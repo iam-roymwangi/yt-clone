@@ -10,6 +10,7 @@ type GoogleDrivePlayerProps = {
   title: string;
   driveUrl: string;
   embedSrc: string;
+  onModeChange?: (mode: "stream" | "embed") => void;
 };
 
 export default function GoogleDrivePlayer({
@@ -17,10 +18,26 @@ export default function GoogleDrivePlayer({
   title,
   driveUrl,
   embedSrc,
+  onModeChange,
 }: GoogleDrivePlayerProps) {
   const streamSrc = `/api/drive-stream/${fileId}`;
   const [useEmbed, setUseEmbed] = useState(false);
   const [streamFailed, setStreamFailed] = useState(false);
+
+  const switchToEmbed = () => {
+    setUseEmbed(true);
+    onModeChange?.("embed");
+  };
+
+  const switchToStream = () => {
+    setUseEmbed(false);
+    onModeChange?.("stream");
+  };
+
+  const handleStreamFailed = () => {
+    setStreamFailed(true);
+    onModeChange?.("embed");
+  };
 
   if (useEmbed || streamFailed) {
     return (
@@ -43,7 +60,7 @@ export default function GoogleDrivePlayer({
           {!streamFailed && (
             <button
               type="button"
-              onClick={() => setUseEmbed(false)}
+              onClick={switchToStream}
               className="text-sm text-violet-400 hover:text-violet-300"
             >
               Try direct player
@@ -68,12 +85,12 @@ export default function GoogleDrivePlayer({
       <DriveVideoWithFallback
         streamSrc={streamSrc}
         title={title}
-        onFailed={() => setStreamFailed(true)}
+        onFailed={handleStreamFailed}
       />
       <div className="flex flex-wrap justify-center gap-3 text-sm">
         <button
           type="button"
-          onClick={() => setUseEmbed(true)}
+          onClick={switchToEmbed}
           className="text-zinc-500 hover:text-violet-300"
         >
           Use Google Drive player instead

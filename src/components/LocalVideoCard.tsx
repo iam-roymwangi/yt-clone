@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Play } from "lucide-react";
-import type { VideoCardData } from "@/lib/videos";
-import { formatDuration } from "@/lib/videos";
+import type { VideoCardData } from "@/lib/types";
+import { formatDuration } from "@/lib/types";
 import VideoThumbnail from "@/components/VideoThumbnail";
 
 export default function LocalVideoCard({ video }: { video: VideoCardData }) {
