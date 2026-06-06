@@ -4,12 +4,15 @@ import {
   createVideo,
   findVideoById,
   listVideos,
+  updateVideo,
+  deleteVideo,
 } from "@/lib/videos-store";
 import type { VideoCardData } from "@/lib/types";
 
 export type { Video } from "@/lib/videos-store";
 export type { VideoCardData } from "@/lib/types";
 export { formatDuration } from "@/lib/types";
+export { updateVideo, deleteVideo } from "@/lib/videos-store";
 
 export function toVideoCardData(video: Video): VideoCardData {
   return {

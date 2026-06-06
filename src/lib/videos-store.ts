@@ -163,6 +163,47 @@ async function addVideoToSupabase(input: {
   return rowToVideo(data);
 }
 
+async function updateVideoInSupabase(
+  id: string,
+  input: {
+    title?: string;
+    description?: string;
+    driveUrl?: string;
+    durationSeconds?: number | null;
+    category?: "video" | "movie";
+  }
+): Promise<Video> {
+  const supabase = createServiceClient();
+
+  const patch: Record<string, unknown> = {};
+  if (input.title !== undefined) patch.title = input.title.trim();
+  if (input.description !== undefined) patch.description = input.description.trim();
+  if (input.category !== undefined) patch.category = input.category;
+  if (input.durationSeconds !== undefined) patch.duration_seconds = input.durationSeconds;
+  if (input.driveUrl !== undefined) {
+    const fileId = extractDriveFileId(input.driveUrl);
+    if (!fileId) throw new Error("Invalid Google Drive link");
+    patch.r2_key = fileId;
+    patch.thumbnail_url = input.driveUrl.trim();
+  }
+
+  const { data, error } = await supabase
+    .from("videos")
+    .update(patch)
+    .eq("id", id)
+    .select("id, title, description, r2_key, thumbnail_url, duration_seconds, created_at, category")
+    .single();
+
+  if (error) throw error;
+  return rowToVideo(data);
+}
+
+async function deleteVideoFromSupabase(id: string): Promise<void> {
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("videos").delete().eq("id", id);
+  if (error) throw error;
+}
+
 export function getStorageMode(): "supabase" | "json" | "unconfigured" {
   if (isSupabaseConfigured()) return "supabase";
   if (shouldUseJsonFile()) return "json";
@@ -187,6 +228,52 @@ export async function findVideoById(id: string): Promise<Video | null> {
     return readVideosFile().find((v) => v.id === id) ?? null;
   }
   return null;
+}
+
+export async function updateVideo(
+  id: string,
+  input: {
+    title?: string;
+    description?: string;
+    driveUrl?: string;
+    durationSeconds?: number | null;
+    category?: "video" | "movie";
+  }
+): Promise<Video> {
+  if (isSupabaseConfigured()) {
+    return updateVideoInSupabase(id, input);
+  }
+  if (shouldUseJsonFile()) {
+    const videos = readVideosFile();
+    const idx = videos.findIndex((v) => v.id === id);
+    if (idx === -1) throw new Error("Video not found");
+    const existing = videos[idx];
+    if (input.title !== undefined) existing.title = input.title.trim();
+    if (input.description !== undefined) existing.description = input.description.trim();
+    if (input.category !== undefined) existing.category = input.category;
+    if (input.durationSeconds !== undefined) existing.durationSeconds = input.durationSeconds;
+    if (input.driveUrl !== undefined) {
+      const fileId = extractDriveFileId(input.driveUrl);
+      if (!fileId) throw new Error("Invalid Google Drive link");
+      existing.driveUrl = input.driveUrl.trim();
+      existing.driveFileId = fileId;
+    }
+    writeVideosFile(videos);
+    return existing;
+  }
+  throw new Error("Storage not configured");
+}
+
+export async function deleteVideo(id: string): Promise<void> {
+  if (isSupabaseConfigured()) {
+    return deleteVideoFromSupabase(id);
+  }
+  if (shouldUseJsonFile()) {
+    const videos = readVideosFile().filter((v) => v.id !== id);
+    writeVideosFile(videos);
+    return;
+  }
+  throw new Error("Storage not configured");
 }
 
 export async function createVideo(input: {

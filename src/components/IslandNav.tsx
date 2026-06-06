@@ -2,20 +2,25 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Library, PlaySquare, Upload } from "lucide-react";
+import { Home, PlaySquare, Upload, ShieldCheck } from "lucide-react";
 
 const links = [
-  { href: "/", label: "Home", icon: Home, match: (p: string) => p === "/" },
   {
-    href: "/library",
-    label: "Library",
-    icon: Library,
-    match: (p: string) => p.startsWith("/library"),
+    href: "/",
+    label: "Home",
+    icon: Home,
+    match: (p: string) => p === "/" || p.startsWith("/library"),
+  },
+  {
+    href: "/upload",
+    label: "Add",
+    icon: Upload,
+    match: (p: string) => p.startsWith("/upload"),
   },
   {
     href: "/admin",
-    label: "Add",
-    icon: Upload,
+    label: "Admin",
+    icon: ShieldCheck,
     match: (p: string) => p.startsWith("/admin"),
   },
 ] as const;
