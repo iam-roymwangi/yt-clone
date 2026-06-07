@@ -1,84 +1,103 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, SortAsc, Clock, Film, ChevronLeft, ChevronRight, Clapperboard, Video } from "lucide-react";
+import {
+  Search, SortAsc, Clock, Film,
+  ChevronLeft, ChevronRight, Clapperboard, Video, Tv2,
+} from "lucide-react";
 import LocalVideoCard from "@/components/LocalVideoCard";
+import SeriesCard, { type SeriesCardData } from "@/components/SeriesCard";
 import { paginate, LIBRARY_PAGE_SIZE } from "@/lib/paginate";
 import type { VideoCardData } from "@/lib/types";
 
 type SortKey = "newest" | "oldest" | "title-az" | "title-za";
+type CategoryFilter = "all" | "video" | "movie" | "series";
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "newest", label: "Newest first" },
   { value: "oldest", label: "Oldest first" },
-  { value: "title-az", label: "Title A→Z" },
-  { value: "title-za", label: "Title Z→A" },
+  { value: "title-az", label: "Title A\u2192Z" },
+  { value: "title-za", label: "Title Z\u2192A" },
 ];
 
 function pageRange(current: number, total: number): (number | "ellipsis")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const pages: (number | "ellipsis")[] = [1];
   if (current > 3) pages.push("ellipsis");
-  for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) {
-    pages.push(p);
-  }
+  for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) pages.push(p);
   if (current < total - 2) pages.push("ellipsis");
   pages.push(total);
   return pages;
 }
 
-export default function LibraryGrid({ videos }: { videos: VideoCardData[] }) {
+type Item =
+  | ({ kind: "video" } & VideoCardData)
+  | ({ kind: "series" } & SeriesCardData);
+
+export default function LibraryGrid({
+  videos,
+  seriesList,
+}: {
+  videos: VideoCardData[];
+  seriesList: SeriesCardData[];
+}) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("newest");
-  const [category, setCategory] = useState<"all" | "video" | "movie">("all");
+  const [category, setCategory] = useState<CategoryFilter>("all");
   const [page, setPage] = useState(1);
 
+  const allItems = useMemo<Item[]>(
+    () => [
+      ...videos.map((v) => ({ kind: "video" as const, ...v })),
+      ...seriesList.map((s) => ({ kind: "series" as const, ...s })),
+    ],
+    [videos, seriesList]
+  );
+
   const filtered = useMemo(() => {
-    let list = [...videos];
-    if (category !== "all") {
-      // treat missing category as "video" for legacy entries
-      list = list.filter((v) => (v.category ?? "video") === category);
+    let list = [...allItems];
+    if (category === "series") {
+      list = list.filter((i) => i.kind === "series");
+    } else if (category !== "all") {
+      list = list.filter((i) => i.kind === "video" && (i.category ?? "video") === category);
     }
     if (query.trim()) {
       const q = query.toLowerCase();
       list = list.filter(
-        (v) =>
-          v.title.toLowerCase().includes(q) ||
-          v.description?.toLowerCase().includes(q)
+        (i) =>
+          i.title.toLowerCase().includes(q) ||
+          i.description?.toLowerCase().includes(q)
       );
     }
     list.sort((a, b) => {
       switch (sort) {
-        case "newest":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case "oldest":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case "title-az":
-          return a.title.localeCompare(b.title);
-        case "title-za":
-          return b.title.localeCompare(a.title);
+        case "newest": return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "oldest": return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "title-az": return a.title.localeCompare(b.title);
+        case "title-za": return b.title.localeCompare(a.title);
       }
     });
     return list;
-  }, [videos, query, sort, category]);
+  }, [allItems, query, sort, category]);
 
   const { items, currentPage, totalPages } = paginate(filtered, page, LIBRARY_PAGE_SIZE);
-
   const handleQuery = (v: string) => { setQuery(v); setPage(1); };
   const handleSort = (v: SortKey) => { setSort(v); setPage(1); };
-  const handleCategory = (v: "all" | "video" | "movie") => { setCategory(v); setPage(1); };
+  const handleCategory = (v: CategoryFilter) => { setCategory(v); setPage(1); };
   const goTo = (p: number) => setPage(Math.max(1, Math.min(p, totalPages)));
   const pages = pageRange(currentPage, totalPages);
 
   return (
     <>
-      {/* Category filter chips */}
-      <div className="mb-4 flex gap-2">
-        {([
-          { value: "all", label: "All", icon: null },
-          { value: "video", label: "Videos", icon: <Video className="h-3.5 w-3.5" /> },
-          { value: "movie", label: "Movies", icon: <Clapperboard className="h-3.5 w-3.5" /> },
-        ] as const).map(({ value, label, icon }) => (
+      <div className="mb-4 flex flex-wrap gap-2">
+        {(
+          [
+            { value: "all", label: "All", icon: null },
+            { value: "video", label: "Videos", icon: <Video className="h-3.5 w-3.5" /> },
+            { value: "movie", label: "Movies", icon: <Clapperboard className="h-3.5 w-3.5" /> },
+            { value: "series", label: "Series", icon: <Tv2 className="h-3.5 w-3.5" /> },
+          ] as const
+        ).map(({ value, label, icon }) => (
           <button
             key={value}
             type="button"
@@ -89,13 +108,11 @@ export default function LibraryGrid({ videos }: { videos: VideoCardData[] }) {
                 : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-600 hover:text-white"
             }`}
           >
-            {icon}
-            {label}
+            {icon}{label}
           </button>
         ))}
       </div>
 
-      {/* Search + sort bar */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
@@ -103,7 +120,7 @@ export default function LibraryGrid({ videos }: { videos: VideoCardData[] }) {
             type="search"
             value={query}
             onChange={(e) => handleQuery(e.target.value)}
-            placeholder="Search videos…"
+            placeholder="Search..."
             className="w-full rounded-xl border border-zinc-800 bg-zinc-900 py-2.5 pl-9 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
           />
         </div>
@@ -112,7 +129,7 @@ export default function LibraryGrid({ videos }: { videos: VideoCardData[] }) {
           <select
             value={sort}
             onChange={(e) => handleSort(e.target.value as SortKey)}
-            className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm text-white outline-none transition focus:border-violet-500 focus:ring-1 focus:ring-violet-500 cursor-pointer"
+            className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm text-white outline-none transition focus:border-violet-500 cursor-pointer"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -121,11 +138,10 @@ export default function LibraryGrid({ videos }: { videos: VideoCardData[] }) {
         </div>
       </div>
 
-      {/* Stats row */}
       <div className="mb-6 flex flex-wrap gap-3 text-xs text-zinc-500">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1">
           <Film className="h-3.5 w-3.5 text-violet-400" />
-          {filtered.length} video{filtered.length === 1 ? "" : "s"}
+          {filtered.length} item{filtered.length === 1 ? "" : "s"}
           {query && ` matching "${query}"`}
         </span>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1">
@@ -136,17 +152,21 @@ export default function LibraryGrid({ videos }: { videos: VideoCardData[] }) {
 
       {filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/30 px-6 py-16 text-center">
-          <p className="text-lg font-medium text-zinc-300">No videos found</p>
+          <p className="text-lg font-medium text-zinc-300">Nothing found</p>
           <p className="mt-2 text-sm text-zinc-500">
-            {query ? `No results for "${query}" — try a different search.` : "No videos yet."}
+            {query ? `No results for "${query}".` : "Nothing here yet."}
           </p>
         </div>
       ) : (
         <>
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
-            {items.map((video) => (
-              <li key={video.id}>
-                <LocalVideoCard video={video} />
+            {items.map((item) => (
+              <li key={item.id}>
+                {item.kind === "series" ? (
+                  <SeriesCard series={item} />
+                ) : (
+                  <LocalVideoCard video={item} />
+                )}
               </li>
             ))}
           </ul>
@@ -167,7 +187,7 @@ export default function LibraryGrid({ videos }: { videos: VideoCardData[] }) {
                 </button>
                 {pages.map((p, i) =>
                   p === "ellipsis" ? (
-                    <span key={`e-${i}`} className="flex h-9 w-8 items-center justify-center text-zinc-600">…</span>
+                    <span key={`e-${i}`} className="flex h-9 w-8 items-center justify-center text-zinc-600">...</span>
                   ) : (
                     <button
                       key={p}

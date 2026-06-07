@@ -12,6 +12,7 @@ export type VideoCardData = {
   durationSeconds: number | null;
   createdAt: string;
   category: "video" | "movie";
+  viewCount: number;
 };
 
 export function formatDuration(seconds: number | null): string {

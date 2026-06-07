@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { getVideos, toVideoCardData } from "@/lib/videos";
+import { listSeries, listEpisodesForSeries } from "@/lib/series-store";
 import AdminPanel from "./AdminPanel";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +18,21 @@ function isAuthenticated(): boolean {
 
 export default async function AdminPage() {
   const authenticated = isAuthenticated();
-  const videos = authenticated
-    ? (await getVideos()).map(toVideoCardData)
-    : [];
+
+  const [videos, seriesWithEps] = authenticated
+    ? await Promise.all([
+        getVideos().then((v) => v.map(toVideoCardData)),
+        (async () => {
+          const series = await listSeries();
+          return Promise.all(
+            series.map(async (s) => {
+              const episodes = await listEpisodesForSeries(s.id);
+              return { ...s, episodes };
+            })
+          );
+        })(),
+      ])
+    : [[], []];
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
@@ -29,7 +42,7 @@ export default async function AdminPage() {
           <p className="mt-1 text-sm text-zinc-500">Manage your video library.</p>
         )}
       </div>
-      <AdminPanel authenticated={authenticated} initialVideos={videos} />
+      <AdminPanel authenticated={authenticated} initialVideos={videos} initialSeries={seriesWithEps} />
     </main>
   );
 }

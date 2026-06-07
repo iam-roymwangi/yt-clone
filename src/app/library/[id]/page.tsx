@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import DrivePlayerWithMiniPlayer from "@/components/DrivePlayerWithMiniPlayer";
 import LocalVideoCard from "@/components/LocalVideoCard";
 import PageHeader from "@/components/PageHeader";
+import ViewCounter from "@/components/ViewCounter";
 import { getVideoById, getVideos, toVideoCardData } from "@/lib/videos";
+import { getViewCount, getViewCounts } from "@/lib/view-counts";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -31,10 +33,12 @@ export default async function LibraryWatchPage({
   if (!video) notFound();
 
   const card = toVideoCardData(video);
-  const others = (await getVideos())
-    .filter((v) => v.id !== video.id)
-    .slice(0, 4)
-    .map(toVideoCardData);
+  const otherVideos = (await getVideos()).filter((v) => v.id !== video.id).slice(0, 4);
+  const [initialViewCount, otherCounts] = await Promise.all([
+    getViewCount(video.id),
+    getViewCounts(otherVideos.map((v) => v.id)),
+  ]);
+  const others = otherVideos.map((v) => toVideoCardData(v, otherCounts[v.id] ?? 0));
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
@@ -49,14 +53,19 @@ export default async function LibraryWatchPage({
             embedSrc={card.embedSrc}
             libraryId={video.id}
           />
-          <h1 className="mt-5 text-xl font-bold leading-snug sm:text-2xl">
-            {video.title}
-          </h1>
-          {video.description && (
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-              {video.description}
-            </p>
-          )}
+          <div className="mt-5">
+            <h1 className="text-xl font-bold leading-snug sm:text-2xl">
+              {video.title}
+            </h1>
+            <div className="mt-2 flex items-center gap-3">
+              <ViewCounter contentId={video.id} initialCount={initialViewCount} />
+            </div>
+            {video.description && (
+              <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+                {video.description}
+              </p>
+            )}
+          </div>
         </div>
 
         <aside>

@@ -14,7 +14,7 @@ export type { VideoCardData } from "@/lib/types";
 export { formatDuration } from "@/lib/types";
 export { updateVideo, deleteVideo } from "@/lib/videos-store";
 
-export function toVideoCardData(video: Video): VideoCardData {
+export function toVideoCardData(video: Video, viewCount = 0): VideoCardData {
   return {
     id: video.id,
     title: video.title,
@@ -27,6 +27,7 @@ export function toVideoCardData(video: Video): VideoCardData {
     durationSeconds: video.durationSeconds,
     createdAt: video.createdAt,
     category: video.category,
+    viewCount,
   };
 }
 
