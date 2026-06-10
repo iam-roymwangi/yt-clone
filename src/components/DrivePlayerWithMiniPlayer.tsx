@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useMiniPlayer, type MiniPlayerVideo } from "@/components/MiniPlayerContext";
 import GoogleDrivePlayer from "@/components/GoogleDrivePlayer";
 
@@ -20,20 +20,12 @@ export default function DrivePlayerWithMiniPlayer({
   libraryId,
 }: Props) {
   const { setVideo, dismiss } = useMiniPlayer();
-  const [mode, setMode] = useState<"stream" | "embed">("stream");
-  const modeRef = useRef<"stream" | "embed">("stream");
-
-  const handleModeChange = useCallback((newMode: "stream" | "embed") => {
-    setMode(newMode);
-    modeRef.current = newMode;
-  }, []);
-
-  const videoMeta = useRef<MiniPlayerVideo>({ fileId, title, driveUrl, embedSrc, libraryId, mode: "stream" });
+  const videoMeta = useRef<MiniPlayerVideo>({ fileId, title, driveUrl, embedSrc, libraryId, mode: "embed" });
 
   // Keep meta in sync
   useEffect(() => {
-    videoMeta.current = { fileId, title, driveUrl, embedSrc, libraryId, mode };
-  }, [fileId, title, driveUrl, embedSrc, libraryId, mode]);
+    videoMeta.current = { fileId, title, driveUrl, embedSrc, libraryId, mode: "embed" };
+  }, [fileId, title, driveUrl, embedSrc, libraryId]);
 
   useEffect(() => {
     dismiss();
@@ -49,7 +41,6 @@ export default function DrivePlayerWithMiniPlayer({
       title={title}
       driveUrl={driveUrl}
       embedSrc={embedSrc}
-      onModeChange={handleModeChange}
     />
   );
 }
