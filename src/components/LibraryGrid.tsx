@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useCallback } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Search, SortAsc, Clock, Film,
-  ChevronLeft, ChevronRight, Clapperboard, Video, Tv2,
+  ChevronLeft, ChevronRight, Clapperboard, Video, Tv2, Mic2, Music2,
 } from "lucide-react";
 import LocalVideoCard from "@/components/LocalVideoCard";
 import SeriesCard, { type SeriesCardData } from "@/components/SeriesCard";
@@ -11,13 +12,16 @@ import { paginate, LIBRARY_PAGE_SIZE } from "@/lib/paginate";
 import type { VideoCardData } from "@/lib/types";
 
 type SortKey = "newest" | "oldest" | "title-az" | "title-za";
-type CategoryFilter = "all" | "video" | "movie" | "series";
+type CategoryFilter = "all" | "video" | "movie" | "podcast" | "mixtape" | "series";
+
+const VALID_SORTS: SortKey[] = ["newest", "oldest", "title-az", "title-za"];
+const VALID_CATEGORIES: CategoryFilter[] = ["all", "video", "movie", "podcast", "mixtape", "series"];
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "newest", label: "Newest first" },
   { value: "oldest", label: "Oldest first" },
-  { value: "title-az", label: "Title A\u2192Z" },
-  { value: "title-za", label: "Title Z\u2192A" },
+  { value: "title-az", label: "Title A→Z" },
+  { value: "title-za", label: "Title Z→A" },
 ];
 
 function pageRange(current: number, total: number): (number | "ellipsis")[] {
@@ -41,10 +45,45 @@ export default function LibraryGrid({
   videos: VideoCardData[];
   seriesList: SeriesCardData[];
 }) {
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortKey>("newest");
-  const [category, setCategory] = useState<CategoryFilter>("all");
-  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Read state from URL, with defaults
+  const query = searchParams.get("q") ?? "";
+  const sort: SortKey = (VALID_SORTS.includes(searchParams.get("sort") as SortKey)
+    ? searchParams.get("sort")
+    : "newest") as SortKey;
+  const category: CategoryFilter = (VALID_CATEGORIES.includes(searchParams.get("category") as CategoryFilter)
+    ? searchParams.get("category")
+    : "all") as CategoryFilter;
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1);
+
+  // Build a new URL with updated params, resetting page unless explicitly set
+  const buildUrl = useCallback(
+    (updates: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === null || value === "") {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      }
+      const qs = params.toString();
+      return qs ? `${pathname}?${qs}` : pathname;
+    },
+    [pathname, searchParams]
+  );
+
+  const handleQuery = (v: string) =>
+    router.replace(buildUrl({ q: v || null, page: null }), { scroll: false });
+  const handleSort = (v: SortKey) =>
+    router.replace(buildUrl({ sort: v === "newest" ? null : v, page: null }), { scroll: false });
+  const handleCategory = (v: CategoryFilter) =>
+    router.replace(buildUrl({ category: v === "all" ? null : v, page: null }), { scroll: false });
+  const goTo = (p: number) =>
+    router.replace(buildUrl({ page: p === 1 ? null : String(p) }), { scroll: false });
 
   const allItems = useMemo<Item[]>(
     () => [
@@ -80,11 +119,8 @@ export default function LibraryGrid({
     return list;
   }, [allItems, query, sort, category]);
 
-  const { items, currentPage, totalPages } = paginate(filtered, page, LIBRARY_PAGE_SIZE);
-  const handleQuery = (v: string) => { setQuery(v); setPage(1); };
-  const handleSort = (v: SortKey) => { setSort(v); setPage(1); };
-  const handleCategory = (v: CategoryFilter) => { setCategory(v); setPage(1); };
-  const goTo = (p: number) => setPage(Math.max(1, Math.min(p, totalPages)));
+  const clampedPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / LIBRARY_PAGE_SIZE)));
+  const { items, currentPage, totalPages } = paginate(filtered, clampedPage, LIBRARY_PAGE_SIZE);
   const pages = pageRange(currentPage, totalPages);
 
   return (
@@ -95,6 +131,8 @@ export default function LibraryGrid({
             { value: "all", label: "All", icon: null },
             { value: "video", label: "Videos", icon: <Video className="h-3.5 w-3.5" /> },
             { value: "movie", label: "Movies", icon: <Clapperboard className="h-3.5 w-3.5" /> },
+            { value: "podcast", label: "Podcasts", icon: <Mic2 className="h-3.5 w-3.5" /> },
+            { value: "mixtape", label: "Mixtapes", icon: <Music2 className="h-3.5 w-3.5" /> },
             { value: "series", label: "Series", icon: <Tv2 className="h-3.5 w-3.5" /> },
           ] as const
         ).map(({ value, label, icon }) => (
@@ -187,7 +225,7 @@ export default function LibraryGrid({
                 </button>
                 {pages.map((p, i) =>
                   p === "ellipsis" ? (
-                    <span key={`e-${i}`} className="flex h-9 w-8 items-center justify-center text-zinc-600">...</span>
+                    <span key={`e-${i}`} className="flex h-9 w-8 items-center justify-center text-zinc-600">…</span>
                   ) : (
                     <button
                       key={p}

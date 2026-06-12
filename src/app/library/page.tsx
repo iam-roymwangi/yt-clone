@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import PageHeader from "@/components/PageHeader";
 import LibraryGrid from "@/components/LibraryGrid";
 import { getVideos, toVideoCardData } from "@/lib/videos";
@@ -54,7 +55,9 @@ export default async function LibraryPage() {
           </p>
         </div>
       ) : (
-        <LibraryGrid videos={allVideos} seriesList={seriesList} />
+        <Suspense>
+          <LibraryGrid videos={allVideos} seriesList={seriesList} />
+        </Suspense>
       )}
     </main>
   );

@@ -11,7 +11,7 @@ export type VideoCardData = {
   thumbnailSrc: string;
   durationSeconds: number | null;
   createdAt: string;
-  category: "video" | "movie";
+  category: "video" | "movie" | "podcast" | "mixtape";
   viewCount: number;
 };
 

@@ -25,7 +25,7 @@ export async function PUT(
     description?: string;
     driveUrl?: string;
     durationSeconds?: number | null;
-    category?: "video" | "movie";
+    category?: "video" | "movie" | "podcast" | "mixtape";
   };
 
   try {

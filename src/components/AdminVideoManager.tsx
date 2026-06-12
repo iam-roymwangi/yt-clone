@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Pencil, Trash2, Loader2, Clapperboard, Video,
+  Pencil, Trash2, Loader2, Clapperboard, Video, Mic2, Music2,
   CheckCircle2, LogOut,
 } from "lucide-react";
 import type { VideoCardData } from "@/lib/types";
@@ -13,7 +13,7 @@ type EditState = {
   title: string;
   description: string;
   driveUrl: string;
-  category: "video" | "movie";
+  category: "video" | "movie" | "podcast" | "mixtape";
 };
 
 export default function AdminVideoManager({
@@ -153,8 +153,8 @@ export default function AdminVideoManager({
                     rows={2}
                     className="resize-none rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-violet-500"
                   />
-                  <div className="flex gap-2">
-                    {(["video", "movie"] as const).map((c) => (
+                  <div className="flex flex-wrap gap-2">
+                    {(["video", "movie", "podcast", "mixtape"] as const).map((c) => (
                       <button
                         key={c}
                         type="button"
@@ -166,7 +166,10 @@ export default function AdminVideoManager({
                             : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white"
                         }`}
                       >
-                        {c === "movie" ? <Clapperboard className="h-3.5 w-3.5" /> : <Video className="h-3.5 w-3.5" />}
+                        {c === "movie" ? <Clapperboard className="h-3.5 w-3.5" /> :
+                         c === "podcast" ? <Mic2 className="h-3.5 w-3.5" /> :
+                         c === "mixtape" ? <Music2 className="h-3.5 w-3.5" /> :
+                         <Video className="h-3.5 w-3.5" />}
                         {c.charAt(0).toUpperCase() + c.slice(1)}
                       </button>
                     ))}
@@ -214,11 +217,20 @@ export default function AdminVideoManager({
                       className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
                         v.category === "movie"
                           ? "bg-amber-900/30 text-amber-400"
+                          : v.category === "podcast"
+                          ? "bg-sky-900/30 text-sky-400"
+                          : v.category === "mixtape"
+                          ? "bg-pink-900/30 text-pink-400"
                           : "bg-violet-900/30 text-violet-400"
                       }`}
                     >
-                      {v.category === "movie" ? <Clapperboard className="h-3 w-3" /> : <Video className="h-3 w-3" />}
-                      {v.category === "movie" ? "Movie" : "Video"}
+                      {v.category === "movie" ? <Clapperboard className="h-3 w-3" /> :
+                       v.category === "podcast" ? <Mic2 className="h-3 w-3" /> :
+                       v.category === "mixtape" ? <Music2 className="h-3 w-3" /> :
+                       <Video className="h-3 w-3" />}
+                      {v.category === "movie" ? "Movie" :
+                       v.category === "podcast" ? "Podcast" :
+                       v.category === "mixtape" ? "Mixtape" : "Video"}
                     </span>
                   </div>
                   <div className="flex flex-shrink-0 items-center gap-1">

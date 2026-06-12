@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     description?: string;
     driveUrl?: string;
     durationSeconds?: number;
-    category?: "video" | "movie";
+    category?: "video" | "movie" | "podcast" | "mixtape";
   };
 
   try {
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       description,
       driveUrl,
       durationSeconds,
-      category: category === "movie" ? "movie" : "video",
+      category: (["video", "movie", "podcast", "mixtape"].includes(category ?? "") ? category : "video") as "video" | "movie" | "podcast" | "mixtape",
     });
 
     revalidatePath("/library", "layout");

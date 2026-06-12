@@ -13,7 +13,7 @@ export type Video = {
   driveFileId: string;
   durationSeconds: number | null;
   createdAt: string;
-  category: "video" | "movie";
+  category: "video" | "movie" | "podcast" | "mixtape";
 };
 
 function isVercel(): boolean {
@@ -44,7 +44,7 @@ function rowToVideo(row: DbRow): Video {
     driveUrl: row.thumbnail_url ?? "",
     durationSeconds: row.duration_seconds,
     createdAt: row.created_at,
-    category: row.category === "movie" ? "movie" : "video",
+    category: (["video", "movie", "podcast", "mixtape"].includes(row.category) ? row.category : "video") as Video["category"],
   };
 }
 function readVideosFile(): Video[] {
@@ -60,7 +60,7 @@ function readVideosFile(): Video[] {
       driveFileId: v.driveFileId ?? "",
       durationSeconds: v.durationSeconds ?? null,
       createdAt: v.createdAt ?? new Date().toISOString(),
-      category: v.category === "movie" ? "movie" : "video",
+      category: (["video", "movie", "podcast", "mixtape"].includes(v.category ?? "") ? v.category : "video") as Video["category"],
     }));
   } catch {
     return [];
@@ -131,7 +131,7 @@ async function addVideoToSupabase(input: {
   description?: string;
   driveUrl: string;
   durationSeconds?: number | null;
-  category?: "video" | "movie";
+  category?: "video" | "movie" | "podcast" | "mixtape";
 }): Promise<Video> {
   const fileId = extractDriveFileId(input.driveUrl);
   if (!fileId) throw new Error("Invalid Google Drive link");
@@ -170,7 +170,7 @@ async function updateVideoInSupabase(
     description?: string;
     driveUrl?: string;
     durationSeconds?: number | null;
-    category?: "video" | "movie";
+    category?: "video" | "movie" | "podcast" | "mixtape";
   }
 ): Promise<Video> {
   const supabase = createServiceClient();
@@ -237,7 +237,7 @@ export async function updateVideo(
     description?: string;
     driveUrl?: string;
     durationSeconds?: number | null;
-    category?: "video" | "movie";
+    category?: "video" | "movie" | "podcast" | "mixtape";
   }
 ): Promise<Video> {
   if (isSupabaseConfigured()) {
@@ -281,7 +281,7 @@ export async function createVideo(input: {
   description?: string;
   driveUrl: string;
   durationSeconds?: number | null;
-  category?: "video" | "movie";
+  category?: "video" | "movie" | "podcast" | "mixtape";
 }): Promise<Video> {
   if (isSupabaseConfigured()) {
     return addVideoToSupabase(input);

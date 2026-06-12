@@ -54,7 +54,7 @@ export default async function LibraryWatchPage({
             libraryId={video.id}
           />
           <div className="mt-5">
-            <h1 className="text-xl font-bold leading-snug sm:text-2xl">
+            <h1 className="text-xl font-bold leading-snug break-words sm:text-2xl">
               {video.title}
             </h1>
             <div className="mt-2 flex items-center gap-3">
