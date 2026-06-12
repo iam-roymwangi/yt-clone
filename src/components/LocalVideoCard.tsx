@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Play, Eye, Video, Clapperboard } from "lucide-react";
+import { Play, Eye, Video, Clapperboard, Mic2, Music2 } from "lucide-react";
 import type { VideoCardData } from "@/lib/types";
 import { formatDuration } from "@/lib/types";
 import { formatViewCount } from "@/lib/view-counts";
@@ -47,12 +47,28 @@ export default function LocalVideoCard({ video }: { video: VideoCardData }) {
   );
 }
 
-function CategoryBadge({ category }: { category: "video" | "movie" }) {
+function CategoryBadge({ category }: { category: "video" | "movie" | "podcast" | "mixtape" }) {
   if (category === "movie") {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-amber-900/30 px-2 py-0.5 text-[10px] font-medium text-amber-400">
         <Clapperboard className="h-3 w-3" />
         Movie
+      </span>
+    );
+  }
+  if (category === "podcast") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-sky-900/30 px-2 py-0.5 text-[10px] font-medium text-sky-400">
+        <Mic2 className="h-3 w-3" />
+        Podcast
+      </span>
+    );
+  }
+  if (category === "mixtape") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-pink-900/30 px-2 py-0.5 text-[10px] font-medium text-pink-400">
+        <Music2 className="h-3 w-3" />
+        Mixtape
       </span>
     );
   }

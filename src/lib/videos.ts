@@ -45,7 +45,7 @@ export async function addVideo(input: {
   description?: string;
   driveUrl: string;
   durationSeconds?: number | null;
-  category?: "video" | "movie";
+  category?: "video" | "movie" | "podcast" | "mixtape";
 }): Promise<Video> {
   return createVideo(input);
 }
