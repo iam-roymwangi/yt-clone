@@ -1,4 +1,4 @@
-export const LIBRARY_PAGE_SIZE = 6;
+export const LIBRARY_PAGE_SIZE = 12;
 
 export function paginate<T>(items: T[], page: number, pageSize: number) {
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
