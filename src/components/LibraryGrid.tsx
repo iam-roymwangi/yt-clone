@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Search, SortAsc, Clock, Film,
@@ -51,6 +51,12 @@ export default function LibraryGrid({
 
   // Read state from URL, with defaults
   const query = searchParams.get("q") ?? "";
+  const [localQuery, setLocalQuery] = useState(query);
+
+  // Sync input field value when query parameter in URL changes
+  useEffect(() => {
+    setLocalQuery(query);
+  }, [query]);
   const sort: SortKey = (VALID_SORTS.includes(searchParams.get("sort") as SortKey)
     ? searchParams.get("sort")
     : "newest") as SortKey;
@@ -152,16 +158,28 @@ export default function LibraryGrid({
       </div>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleQuery(localQuery);
+          }}
+          className="relative flex-1"
+        >
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
           <input
-            type="search"
-            value={query}
-            onChange={(e) => handleQuery(e.target.value)}
+            type="text"
+            value={localQuery}
+            onChange={(e) => setLocalQuery(e.target.value)}
             placeholder="Search..."
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 py-2.5 pl-9 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 py-2.5 pl-9 pr-24 text-sm text-white placeholder-zinc-500 outline-none transition focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
           />
-        </div>
+          <button
+            type="submit"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg bg-violet-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-violet-500 active:scale-95 shadow-md shadow-violet-900/20"
+          >
+            Search
+          </button>
+        </form>
         <div className="flex items-center gap-2">
           <SortAsc className="h-4 w-4 shrink-0 text-zinc-500" />
           <select
